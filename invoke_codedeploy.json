@@ -1,0 +1,195 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Trigger CodeDeploy on s3:ObjectCreated:*",
+  "Parameters" : {
+		"CodeDeployApplication": {
+			"Type": "String",
+			"Description": "CodeDeploy application name"
+    },
+		"CodeDeployDeploymentGroup": {
+			"Type": "String",
+			"Description": "CodeDeploy deployment group name"
+    },
+		"RepoBucket": {
+      "Type": "String",
+      "Description": "Repository bucket name"
+    },
+		"RepoZipPath": {
+      "Type": "String",
+      "Description": "Repository zip key path"
+    }
+  },
+  "Resources": {
+		"CodeDeployIamRoleLambdaExecution": {
+			"Properties": {
+				"AssumeRolePolicyDocument": {
+					"Statement": [
+						{
+							"Action": [
+								"sts:AssumeRole"
+							],
+							"Effect": "Allow",
+							"Principal": {
+								"Service": [
+									"lambda.amazonaws.com"
+								]
+							}
+						}
+					],
+					"Version": "2012-10-17"
+				},
+				"Path": "/",
+				"Policies": [
+					{
+						"PolicyDocument": {
+							"Statement": [
+								{
+									"Action": [
+										"logs:CreateLogGroup",
+										"logs:CreateLogStream",
+										"logs:PutLogEvents"
+									],
+									"Effect": "Allow",
+									"Resource": "arn:aws:logs:*:*:*"
+								},
+								{
+									"Action": [
+										"codedeploy:*"
+									],
+									"Effect": "Allow",
+									"Resource": "*"
+								}
+							],
+							"Version": "2012-10-17"
+						},
+						"PolicyName": { "Fn::Join" : [ "-", [ "IAM", "TriggerCodeDeploy", { "Ref" : "AWS::StackName" }, "Lambda", "Policy" ] ] }
+					}
+				],
+				"RoleName": { "Fn::Join" : [ "-", [ "IAM", "TriggerCodeDeploy", { "Ref" : "AWS::StackName" }, "Lambda", "Role" ] ] }
+			},
+			"Type": "AWS::IAM::Role"
+		},
+		"S3NotificationIamRoleLambdaExecution": {
+			"Properties": {
+				"AssumeRolePolicyDocument": {
+					"Statement": [
+						{
+							"Action": [
+								"sts:AssumeRole"
+							],
+							"Effect": "Allow",
+							"Principal": {
+								"Service": [
+									"lambda.amazonaws.com"
+								]
+							}
+						}
+					],
+					"Version": "2012-10-17"
+				},
+				"Path": "/",
+				"Policies": [
+					{
+						"PolicyDocument": {
+							"Statement": [
+								{
+									"Action": [
+										"logs:CreateLogGroup",
+										"logs:CreateLogStream",
+										"logs:PutLogEvents"
+									],
+									"Effect": "Allow",
+									"Resource": "arn:aws:logs:*:*:*"
+								},
+								{
+									"Action": [
+										"s3:GetBucketNotification",
+										"s3:PutBucketNotification"
+									],
+									"Effect": "Allow",
+									"Resource": "*"
+								}
+							],
+							"Version": "2012-10-17"
+						},
+						"PolicyName": { "Fn::Join" : [ "-", [ "IAM", "AddS3Notification", { "Ref" : "AWS::StackName" }, "Lambda", "Policy" ] ] }
+					}
+				],
+				"RoleName": { "Fn::Join" : [ "-", [ "IAM", "AddS3Notification", { "Ref" : "AWS::StackName" }, "Lambda", "Role" ] ] }
+			},
+			"Type": "AWS::IAM::Role"
+		},
+    "CodedeployLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "open-source-artifacts",
+          "S3Key": "git_intgrtn_aws_s3/invoke_codedeploy.zip"
+        },
+        "FunctionName": { "Fn::Join" : [ "-", [ "TriggerCodeDeploy", { "Ref" : "AWS::StackName" } ] ] },
+        "Handler": "lambda_function.deploy",
+        "MemorySize": 256,
+        "Role": {
+          "Fn::GetAtt": [
+            "CodeDeployIamRoleLambdaExecution",
+            "Arn"
+          ]
+        },
+        "Runtime": "python2.7",
+        "Timeout": 300,
+        "Environment": {
+          "Variables": {
+            "s3_bucket": { "Ref": "RepoBucket" },
+            "s3_key": { "Ref": "RepoZipPath" },
+            "application_name": { "Ref": "CodeDeployApplication" },
+            "deployment_group": { "Ref": "CodeDeployDeploymentGroup" }
+          }
+        }
+      }
+    },
+    "S3NotificationLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "open-source-artifacts",
+          "S3Key": "git_intgrtn_aws_s3/invoke_codedeploy.zip"
+        },
+        "FunctionName": { "Fn::Join" : [ "-", [ "AddS3Notification", { "Ref" : "AWS::StackName" } ] ] },
+        "Handler": "lambda_function.add_s3_notification",
+        "MemorySize": 256,
+        "Role": {
+          "Fn::GetAtt": [
+            "S3NotificationIamRoleLambdaExecution",
+            "Arn"
+          ]
+        },
+        "Runtime": "python2.7",
+        "Timeout": 300,
+        "Environment": {
+          "Variables": {
+            "s3_bucket": { "Ref": "RepoBucket" },
+            "s3_key": { "Ref": "RepoZipPath" },
+            "lambda_arn": { "Fn::GetAtt": [ "CodedeployLambdaFunction", "Arn" ] }
+          }
+        }
+      }
+    },
+		"AddS3LambdaTrigger": {
+		  "Type": "AWS::CloudFormation::CustomResource",
+		  "Version": "1.0",
+			"DependsOn": "CodedeployInvokePermission",
+			"Properties": {
+				"ServiceToken": { "Fn::GetAtt": [ "S3NotificationLambdaFunction", "Arn" ] }
+			}
+		},
+		"CodedeployInvokePermission": {
+			"Type" : "AWS::Lambda::Permission",
+			"Properties" : {
+				"Action" : "lambda:InvokeFunction",
+				"FunctionName" : { "Fn::GetAtt": [ "CodedeployLambdaFunction", "Arn" ] },
+				"Principal" : "s3.amazonaws.com",
+				"SourceArn": { "Fn::Join" : [ "", [ "arn:aws:s3:::", { "Ref": "RepoBucket" } ] ] }
+			}
+		}
+  }
+}
