@@ -73,6 +73,32 @@ def add_s3_notification(event, context):
                 Bucket=os.getenv('s3_bucket'),
                 NotificationConfiguration=new_notifications
             )
+        elif event['RequestType'] == 'Update':
+            new_notification = {
+                'LambdaFunctionArn': os.getenv('lambda_arn'),
+                'Events': ['s3:ObjectCreated:*'],
+                'Filter': {
+                    'Key': {
+                        'FilterRules': [
+                            {
+                                'Name': 'prefix',
+                                'Value': os.path.dirname(os.getenv('s3_key')) + '/'
+                            },
+                            {
+                                'Name': 'suffix',
+                                'Value': '.zip'
+                            }
+                        ]
+                    }
+                }
+            }
+            log.info('Updating with new bucket notification %s', new_notification)
+            new_notifications['LambdaFunctionConfigurations'].pop(key_to_delete)
+            new_notifications['LambdaFunctionConfigurations'].append(new_notification)
+            client.put_bucket_notification_configuration(
+                Bucket=os.getenv('s3_bucket'),
+                NotificationConfiguration=new_notifications
+            )
         elif event['RequestType'] == 'Delete':
             new_notifications['LambdaFunctionConfigurations'].pop(key_to_delete)
             log.info('Deleting bucket notification %s', new_notifications['LambdaFunctionConfigurations'])

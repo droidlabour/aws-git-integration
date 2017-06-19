@@ -1,0 +1,331 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "ECS Main",
+    "Mappings": {
+        "TemplateURL": {
+            "APP": {
+                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/ecs_service.json"
+            },
+            "CodePipeline": {
+                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/codepipeline.json"
+            },
+            "ECR": {
+                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/ecs_registry.json"
+            },
+            "ECSCluster": {
+                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/ecs_cluster.json"
+            }
+        }
+    },
+    "Outputs": {
+        "StackName": {
+            "Description": "Stack Name",
+            "Value": {
+                "Ref": "AWS::StackName"
+            }
+        }
+    },
+    "Parameters": {
+        "ACMARN": {
+            "ConstraintDescription": "must be a valid AWS ARN.",
+            "Description": "AWS Certificate Manager ARN to be used in Application Elastic Load Balancer for SSL traffic",
+            "Type": "String"
+        },
+        "Application": {
+            "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
+            "Description": "Application Name",
+            "Type": "String"
+        },
+        "ContainerInstanceKeyPair": {
+            "ConstraintDescription": "must be the name of an existing EC2 KeyPair.",
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access to the ECS ContainerInstance",
+            "Type": "AWS::EC2::KeyPair::KeyName"
+        },
+        "ContainerInstanceType": {
+            "AllowedValues": [
+                "t2.nano",
+                "t2.micro",
+                "t2.small",
+                "t2.medium",
+                "t2.large",
+                "t2.xlarge",
+                "t2.2xlarge",
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge",
+                "m4.large",
+                "m4.xlarge",
+                "m4.2xlarge",
+                "m4.4xlarge",
+                "m4.10xlarge",
+                "m4.16xlarge",
+                "c4.large",
+                "c4.xlarge",
+                "c4.2xlarge",
+                "c4.4xlarge",
+                "c4.8xlarge",
+                "c3.large",
+                "c3.xlarge",
+                "c3.2xlarge",
+                "c3.4xlarge",
+                "c3.8xlarge",
+                "cr1.8xlarge",
+                "r3.large",
+                "r3.xlarge",
+                "r3.2xlarge",
+                "r3.4xlarge",
+                "r3.8xlarge",
+                "r4.large",
+                "r4.xlarge",
+                "r4.2xlarge",
+                "r4.4xlarge",
+                "r4.8xlarge",
+                "r4.16xlarge",
+                "x1.16xlarge",
+                "x1.32xlarge",
+                "d2.xlarge",
+                "d2.2xlarge",
+                "d2.4xlarge",
+                "d2.8xlarge",
+                "i2.xlarge",
+                "i2.2xlarge",
+                "i2.4xlarge",
+                "i2.8xlarge",
+                "i3.large",
+                "i3.xlarge",
+                "i3.2xlarge",
+                "i3.4xlarge",
+                "i3.8xlarge",
+                "i3.16xlarge",
+                "g2.2xlarge",
+                "g2.8xlarge",
+                "p2.xlarge",
+                "p2.8xlarge",
+                "p2.16xlarge"
+            ],
+            "Default": "t2.medium",
+            "Description": "The instance type to use for ECS ContainerInstance.",
+            "Type": "String"
+        },
+        "ContainerPort": {
+            "Default": "80",
+            "Description": "ContainerPort",
+            "Type": "Number"
+        },
+        "DesiredCapacity": {
+            "Default": "2",
+            "Description": "Desired Number of EC2 Instances",
+            "Type": "Number"
+        },
+        "ECRImageTag": {
+            "Default": "latest",
+            "Description": "Name of the docker image tag",
+            "Type": "String"
+        },
+        "ECSTaskDesiredCount": {
+            "Default": "0",
+            "Description": "No of ECS task count for prod environment",
+            "Type": "Number"
+        },
+        "Environment": {
+            "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
+            "Description": "Environment Name",
+            "Type": "String"
+        },
+        "MinCapacity": {
+            "Default": "2",
+            "Description": "Minimum Number of EC2 Instances in Autoscaling group",
+            "Type": "Number"
+        },
+        "S3Bucket": {
+            "Description": "S3 Source Bucket Name",
+            "Type": "String"
+        },
+        "S3ObjectLocation": {
+            "Description": "S3 Object Location",
+            "Type": "String"
+        },
+        "Subnets": {
+            "Description": "Application load balancer Subnets ID",
+            "Type": "List<AWS::EC2::Subnet::Id>"
+        },
+        "VPC": {
+            "Description": "VPC ID for ECS Container Instance and TargetGroups",
+            "Type": "AWS::EC2::VPC::Id"
+        }
+    },
+    "Resources": {
+        "APP": {
+            "Properties": {
+                "Parameters": {
+                    "ACMARN": {
+                        "Ref": "ACMARN"
+                    },
+                    "Application": {
+                        "Ref": "Application"
+                    },
+                    "ContainerPort": {
+                        "Ref": "ContainerPort"
+                    },
+                    "ECRImageTag": {
+                        "Ref": "ECRImageTag"
+                    },
+                    "ECRStackName": {
+                        "Fn::GetAtt": [
+                            "ECR",
+                            "Outputs.StackName"
+                        ]
+                    },
+                    "ECSClusterStackName": {
+                        "Fn::GetAtt": [
+                            "ECSCluster",
+                            "Outputs.StackName"
+                        ]
+                    },
+                    "ECSTaskDesiredCount": {
+                        "Ref": "ECSTaskDesiredCount"
+                    },
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "Subnets": {
+                        "Fn::Join": [
+                            ",",
+                            {
+                                "Ref": "Subnets"
+                            }
+                        ]
+                    },
+                    "VPC": {
+                        "Ref": "VPC"
+                    }
+                },
+                "TemplateURL": {
+                    "Fn::FindInMap": [
+                        "TemplateURL",
+                        "APP",
+                        "url"
+                    ]
+                }
+            },
+            "Type": "AWS::CloudFormation::Stack"
+        },
+        "CodePipeline": {
+            "Properties": {
+                "Parameters": {
+                    "ACMARN": {
+                        "Ref": "ACMARN"
+                    },
+                    "APPStackName": {
+                        "Fn::GetAtt": [
+                            "APP",
+                            "Outputs.StackName"
+                        ]
+                    },
+                    "Application": {
+                        "Ref": "Application"
+                    },
+                    "ContainerPort": {
+                        "Ref": "ContainerPort"
+                    },
+                    "ECRStackName": {
+                        "Fn::GetAtt": [
+                            "ECR",
+                            "Outputs.StackName"
+                        ]
+                    },
+                    "ECSClusterStackName": {
+                        "Fn::GetAtt": [
+                            "ECSCluster",
+                            "Outputs.StackName"
+                        ]
+                    },
+                    "ECSTaskDesiredCount": {
+                        "Ref": "DesiredCapacity"
+                    },
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "S3Bucket": {
+                        "Ref": "S3Bucket"
+                    },
+                    "S3ObjectLocation": {
+                        "Ref": "S3ObjectLocation"
+                    },
+                    "Subnets": {
+                        "Fn::Join": [
+                            ",",
+                            {
+                                "Ref": "Subnets"
+                            }
+                        ]
+                    },
+                    "VPC": {
+                        "Ref": "VPC"
+                    }
+                },
+                "TemplateURL": {
+                    "Fn::FindInMap": [
+                        "TemplateURL",
+                        "CodePipeline",
+                        "url"
+                    ]
+                }
+            },
+            "Type": "AWS::CloudFormation::Stack"
+        },
+        "ECR": {
+            "Properties": {
+                "Parameters": {
+                    "Application": {
+                        "Ref": "Application"
+                    }
+                },
+                "TemplateURL": {
+                    "Fn::FindInMap": [
+                        "TemplateURL",
+                        "ECR",
+                        "url"
+                    ]
+                }
+            },
+            "Type": "AWS::CloudFormation::Stack"
+        },
+        "ECSCluster": {
+            "Properties": {
+                "Parameters": {
+                    "Application": {
+                        "Ref": "Application"
+                    },
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "ContainerInstanceKeyPair": {
+                        "Ref": "ContainerInstanceKeyPair"
+                    },
+                    "ContainerInstanceType": {
+                        "Ref": "ContainerInstanceType"
+                    },
+                    "DesiredCapacity": {
+                        "Ref": "DesiredCapacity"
+                    },
+                    "MinCapacity": {
+                        "Ref": "MinCapacity"
+                    },
+                    "VPC": {
+                        "Ref": "VPC"
+                    }
+                },
+                "TemplateURL": {
+                    "Fn::FindInMap": [
+                        "TemplateURL",
+                        "ECSCluster",
+                        "url"
+                    ]
+                }
+            },
+            "Type": "AWS::CloudFormation::Stack"
+        }
+    }
+}

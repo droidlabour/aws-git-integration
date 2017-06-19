@@ -1,0 +1,95 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "ECR Repository",
+    "Outputs": {
+        "ECR": {
+            "Description": "ECR Repository URI",
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ECR-URI"
+                }
+            },
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        {
+                            "Ref": "AWS::AccountId"
+                        },
+                        ".dkr",
+                        ".ecr.",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        ".amazonaws",
+                        ".com/",
+                        {
+                            "Ref": "ECR"
+                        }
+                    ]
+                ]
+            }
+        },
+        "StackName": {
+            "Description": "Stack Name",
+            "Value": {
+                "Ref": "AWS::StackName"
+            }
+        }
+    },
+    "Parameters": {
+        "Application": {
+            "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
+            "Description": "Application Name",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "ECR": {
+            "Properties": {
+                "RepositoryName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "ecr",
+                            {
+                                "Ref": "Application"
+                            }
+                        ]
+                    ]
+                },
+                "RepositoryPolicyText": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "ecr:GetDownloadUrlForLayer",
+                                "ecr:BatchGetImage",
+                                "ecr:BatchCheckLayerAvailability",
+                                "ecr:PutImage",
+                                "ecr:InitiateLayerUpload",
+                                "ecr:UploadLayerPart",
+                                "ecr:CompleteLayerUpload"
+                            ],
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": [
+                                    "arn:aws:iam::157144849617:root",
+                                    "arn:aws:iam::883865855280:root",
+                                    "arn:aws:iam::201349592320:root",
+                                    "arn:aws:iam::131992011433:root",
+                                    "arn:aws:iam::828209784933:root",
+                                    "arn:aws:iam::964771811575:root",
+                                    "arn:aws:iam::064387162992:root",
+                                    "arn:aws:iam::570169269855:root"
+                                ]
+                            },
+                            "Sid": "CodeBuildAccess"
+                        }
+                    ],
+                    "Version": "2008-10-17"
+                }
+            },
+            "Type": "AWS::ECR::Repository"
+        }
+    }
+}

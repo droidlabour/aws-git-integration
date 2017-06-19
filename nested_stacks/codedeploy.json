@@ -1,0 +1,146 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Create CodeDeploy application and deployment groups and configurations.",
+    "Outputs": {
+        "CodeDeployApplication": {
+            "Description": "CodeDeploy Application Name",
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-CodeDeployApplication"
+                }
+            },
+            "Value": {
+				"Ref": "CodeDeployApplication"
+            }
+        },
+        "CodeDeploymentGroup": {
+            "Description": "CodeDeploy Deployment Group Name",
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-CodeDeploymentGroup"
+                }
+            },
+            "Value": {
+				"Ref": "CodeDeploymentGroup"
+            }
+        },
+        "StackName": {
+            "Description": "Stack Name",
+            "Value": {
+                "Ref": "AWS::StackName"
+            }
+        }
+    },
+    "Parameters": {
+        "Application": {
+            "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
+            "Description": "Application Name",
+            "Type": "String"
+        },
+        "EC2CodeDeployCFNStackName": {
+            "Description": "EC2 CodeDeploy Cloudformation Stack Name",
+            "Type": "String"
+        },
+        "Environment": {
+            "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
+            "Description": "Environment Name",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "CodeDeployApplication": {
+            "Properties": {
+                "ApplicationName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            {
+                                "Ref": "Environment"
+                            },
+                            {
+                                "Ref": "Application"
+                            }
+                        ]
+                    ]
+                }
+            },
+            "Type": "AWS::CodeDeploy::Application"
+        },
+        "CodeDeploymentGroup": {
+            "Properties": {
+                "ApplicationName": {
+                    "Ref": "CodeDeployApplication"
+                },
+                "AutoScalingGroups": [
+                    {
+                        "Fn::ImportValue": {
+                            "Fn::Sub": "${EC2CodeDeployCFNStackName}-AutoScalingGroup"
+                        }
+                    }
+                ],
+                "DeploymentConfigName": "CodeDeployDefault.AllAtOnce",
+                "DeploymentGroupName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            {
+                                "Ref": "Environment"
+                            },
+                            {
+                                "Ref": "Application"
+                            }
+                        ]
+                    ]
+                },
+                "ServiceRoleArn": {
+                    "Fn::GetAtt": [
+                        "IAMAssumeCodeDeployServiceRole",
+                        "Arn"
+                    ]
+                }
+            },
+            "Type": "AWS::CodeDeploy::DeploymentGroup"
+        },
+        "IAMAssumeCodeDeployServiceRole": {
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "sts:AssumeRole"
+                            ],
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "codedeploy.amazonaws.com"
+                                ]
+                            }
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole"
+                ],
+                "Path": "/",
+                "RoleName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "IAM",
+                            {
+                                "Ref": "Environment"
+                            },
+                            {
+                                "Ref": "Application"
+                            },
+                            "CodeDeploy",
+                            "Role"
+                        ]
+                    ]
+                }
+            },
+            "Type": "AWS::IAM::Role"
+        }
+    }
+}

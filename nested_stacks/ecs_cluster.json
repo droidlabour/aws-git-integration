@@ -1,0 +1,524 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "ECS Cluster",
+    "Mappings": {
+        "ContainerInstanceRegionMap": {
+            "ap-northeast-1": {
+                "64": "ami-f63f6f91"
+            },
+            "ap-southeast-1": {
+                "64": "ami-b4ae1dd7"
+            },
+            "ap-southeast-2": {
+                "64": "ami-fbe9eb98"
+            },
+            "ca-central-1": {
+                "64": "ami-ee58e58a"
+            },
+            "eu-central-1": {
+                "64": "ami-085e8a67"
+            },
+            "eu-west-1": {
+                "64": "ami-95f8d2f3"
+            },
+            "eu-west-2": {
+                "64": "ami-bf9481db"
+            },
+            "us-east-1": {
+                "64": "ami-275ffe31"
+            },
+            "us-east-2": {
+                "64": "ami-62745007"
+            },
+            "us-west-1": {
+                "64": "ami-689bc208"
+            },
+            "us-west-2": {
+                "64": "ami-62d35c02"
+            }
+        }
+    },
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "Container Instance & VPC"
+                    },
+                    "Parameters": [
+                        "ContainerInstanceType",
+                        "ContainerInstanceKeyPair",
+                        "MinCapacity",
+                        "DesiredCapacity",
+                        "VPC"
+                    ]
+                }
+            ]
+        }
+    },
+    "Outputs": {
+        "ContainerInstanceSecurityGroupsID": {
+            "Description": "Container Instance Security Group",
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ContainerInstanceSecurityGroups"
+                }
+            },
+            "Value": {
+                "Fn::GetAtt": [
+                    "ContainerInstanceSecurityGroups",
+                    "GroupId"
+                ]
+            }
+        },
+        "ECSClusterApp": {
+            "Description": "ECS Cluster Name",
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ECSClusterApp"
+                }
+            },
+            "Value": {
+                "Ref": "ECSClusterApp"
+            }
+        },
+        "StackName": {
+            "Description": "Stack Name",
+            "Value": {
+                "Ref": "AWS::StackName"
+            }
+        }
+    },
+    "Parameters": {
+        "Application": {
+            "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
+            "Description": "Application Name",
+            "Type": "String"
+        },
+        "Environment": {
+            "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
+            "Description": "Environment Name",
+            "Type": "String"
+        },
+        "ContainerInstanceKeyPair": {
+            "ConstraintDescription": "must be the name of an existing EC2 KeyPair.",
+            "Description": "Name of an existing EC2 KeyPair to enable SSH access to the ECS ContainerInstance",
+            "Type": "String"
+        },
+        "ContainerInstanceType": {
+            "AllowedValues": [
+                "t2.nano",
+                "t2.micro",
+                "t2.small",
+                "t2.medium",
+                "t2.large",
+                "t2.xlarge",
+                "t2.2xlarge",
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge",
+                "m4.large",
+                "m4.xlarge",
+                "m4.2xlarge",
+                "m4.4xlarge",
+                "m4.10xlarge",
+                "m4.16xlarge",
+                "c4.large",
+                "c4.xlarge",
+                "c4.2xlarge",
+                "c4.4xlarge",
+                "c4.8xlarge",
+                "c3.large",
+                "c3.xlarge",
+                "c3.2xlarge",
+                "c3.4xlarge",
+                "c3.8xlarge",
+                "cr1.8xlarge",
+                "r3.large",
+                "r3.xlarge",
+                "r3.2xlarge",
+                "r3.4xlarge",
+                "r3.8xlarge",
+                "r4.large",
+                "r4.xlarge",
+                "r4.2xlarge",
+                "r4.4xlarge",
+                "r4.8xlarge",
+                "r4.16xlarge",
+                "x1.16xlarge",
+                "x1.32xlarge",
+                "d2.xlarge",
+                "d2.2xlarge",
+                "d2.4xlarge",
+                "d2.8xlarge",
+                "i2.xlarge",
+                "i2.2xlarge",
+                "i2.4xlarge",
+                "i2.8xlarge",
+                "i3.large",
+                "i3.xlarge",
+                "i3.2xlarge",
+                "i3.4xlarge",
+                "i3.8xlarge",
+                "i3.16xlarge",
+                "g2.2xlarge",
+                "g2.8xlarge",
+                "p2.xlarge",
+                "p2.8xlarge",
+                "p2.16xlarge"
+            ],
+            "Default": "t2.medium",
+            "Description": "The instance type to use for ECS ContainerInstance.",
+            "Type": "String"
+        },
+        "DesiredCapacity": {
+            "Default": "3",
+            "Description": "Desired Number of EC2 Instances",
+            "Type": "Number"
+        },
+        "MinCapacity": {
+            "Default": "3",
+            "Description": "Minimum Number of EC2 Instances in Autoscaling group",
+            "Type": "Number"
+        },
+        "VPC": {
+            "Description": "VPC ID for ECS Container Instance and TargetGroups",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "AutoScalingGroupContainerInstance": {
+            "Properties": {
+                "AvailabilityZones": {
+                    "Fn::GetAZs": {
+                        "Ref": "AWS::Region"
+                    }
+                },
+                "DesiredCapacity": {
+                    "Ref": "DesiredCapacity"
+                },
+                "HealthCheckGracePeriod": 400,
+                "HealthCheckType": "EC2",
+                "LaunchConfigurationName": {
+                    "Ref": "LaunchConfigurationContainerInstance"
+                },
+                "MaxSize": 40,
+                "MetricsCollection": [
+                    {
+                        "Granularity": "1Minute"
+                    }
+                ],
+                "MinSize": {
+                    "Ref": "MinCapacity"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "PropagateAtLaunch": true,
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "Application"
+                                    },
+                                    {
+                                        "Ref": "Environment"
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                ]
+            },
+            "Type": "AWS::AutoScaling::AutoScalingGroup"
+        },
+        "CPUAlarmHighContainerInstance": {
+            "Properties": {
+                "AlarmActions": [
+                    {
+                        "Ref": "ScalingUpPolicyContainerInstance"
+                    }
+                ],
+                "AlarmDescription": "Alarm if CPU too high or metric disappears indicating instance is down",
+                "AlarmName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+							{
+								"Ref": "Application"
+							},
+							{
+								"Ref": "Environment"
+							},
+                            "CPU",
+                            "High"
+                        ]
+                    ]
+                },
+                "ComparisonOperator": "GreaterThanThreshold",
+                "Dimensions": [
+                    {
+                        "Name": "AutoScalingGroupName",
+                        "Value": {
+                            "Ref": "AutoScalingGroupContainerInstance"
+                        }
+                    }
+                ],
+                "EvaluationPeriods": "1",
+                "MetricName": "CPUUtilization",
+                "Namespace": "AWS/EC2",
+                "Period": "60",
+                "Statistic": "Sum",
+                "Threshold": "75"
+            },
+            "Type": "AWS::CloudWatch::Alarm"
+        },
+        "CPUAlarmLowContainerInstance": {
+            "Properties": {
+                "AlarmActions": [
+                    {
+                        "Ref": "ScalingDownPolicyContainerInstance"
+                    }
+                ],
+                "AlarmDescription": "Scale-down if CPU < 75% for 10 minutes",
+                "AlarmName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+							{
+								"Ref": "Application"
+							},
+							{
+								"Ref": "Environment"
+							},
+                            "CPU",
+                            "Low"
+                        ]
+                    ]
+                },
+                "ComparisonOperator": "LessThanThreshold",
+                "Dimensions": [
+                    {
+                        "Name": "AutoScalingGroupName",
+                        "Value": {
+                            "Ref": "AutoScalingGroupContainerInstance"
+                        }
+                    }
+                ],
+                "EvaluationPeriods": 2,
+                "MetricName": "CPUUtilization",
+                "Namespace": "AWS/EC2",
+                "Period": 300,
+                "Statistic": "Sum",
+                "Threshold": 75
+            },
+            "Type": "AWS::CloudWatch::Alarm"
+        },
+        "ContainerInstanceInstanceProfile": {
+            "Properties": {
+                "InstanceProfileName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            {
+                                "Ref": "AWS::StackName"
+                            }
+                        ]
+                    ]
+                },
+                "Path": "/",
+                "Roles": [
+                    {
+                        "Ref": "IAMAssumeContainerInstanceRole"
+                    }
+                ]
+            },
+            "Type": "AWS::IAM::InstanceProfile"
+        },
+        "ContainerInstanceSecurityGroups": {
+            "Properties": {
+                "GroupDescription": "ECS EC2 Security Group",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "ECSClusterApp": {
+            "Properties": {
+                "ClusterName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+							{
+								"Ref": "Application"
+							},
+							{
+								"Ref": "Environment"
+							}
+                        ]
+                    ]
+                }
+            },
+            "Type": "AWS::ECS::Cluster"
+        },
+        "IAMAssumeContainerInstanceRole": {
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "sts:AssumeRole"
+                            ],
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "ec2.amazonaws.com"
+                                ]
+                            }
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Action": [
+                                        "ecs:CreateCluster",
+                                        "ecs:DeregisterContainerInstance",
+                                        "ecs:DiscoverPollEndpoint",
+                                        "ecs:Poll",
+                                        "ecs:RegisterContainerInstance",
+                                        "ecs:StartTelemetrySession",
+                                        "ecs:Submit*",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents",
+                                        "ecr:*"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": "*"
+                                }
+                            ],
+                            "Version": "2012-10-17"
+                        },
+                        "PolicyName": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    }
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "RoleName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            {
+                                "Ref": "AWS::StackName"
+                            }
+                        ]
+                    ]
+                }
+            },
+            "Type": "AWS::IAM::Role"
+        },
+        "LaunchConfigurationContainerInstance": {
+            "Properties": {
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvdcz",
+                        "Ebs": {
+                            "DeleteOnTermination": true,
+                            "VolumeSize": "22",
+                            "VolumeType": "gp2"
+                        }
+                    }
+                ],
+                "IamInstanceProfile": {
+                    "Ref": "ContainerInstanceInstanceProfile"
+                },
+                "ImageId": {
+                    "Fn::FindInMap": [
+                        "ContainerInstanceRegionMap",
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "64"
+                    ]
+                },
+                "InstanceMonitoring": true,
+                "InstanceType": {
+                    "Ref": "ContainerInstanceType"
+                },
+                "KeyName": {
+                    "Ref": "ContainerInstanceKeyPair"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "ContainerInstanceSecurityGroups"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash -xe\n",
+                                "echo ECS_CLUSTER=",
+                                {
+                                    "Ref": "ECSClusterApp"
+                                },
+                                " >> /etc/ecs/ecs.config\n"
+                            ]
+                        ]
+                    }
+                }
+            },
+            "Type": "AWS::AutoScaling::LaunchConfiguration"
+        },
+        "ScalingDownPolicyContainerInstance": {
+            "Properties": {
+                "AdjustmentType": "ChangeInCapacity",
+                "AutoScalingGroupName": {
+                    "Ref": "AutoScalingGroupContainerInstance"
+                },
+                "ScalingAdjustment": -1
+            },
+            "Type": "AWS::AutoScaling::ScalingPolicy"
+        },
+        "ScalingUpPolicyContainerInstance": {
+            "Properties": {
+                "AdjustmentType": "ChangeInCapacity",
+                "AutoScalingGroupName": {
+                    "Ref": "AutoScalingGroupContainerInstance"
+                },
+                "ScalingAdjustment": 1
+            },
+            "Type": "AWS::AutoScaling::ScalingPolicy"
+        }
+    }
+}

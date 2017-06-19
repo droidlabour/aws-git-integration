@@ -1,0 +1,213 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "CodeDeploy Main",
+    "Mappings": {
+        "TemplateURL": {
+            "EC2Fleet": {
+                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/ec2_fleet.json"
+            },
+            "CodeDeploy": {
+                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/codedeploy.json"
+            },
+            "AddCodedeployS3Trigger": {
+                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/add_codedeploy_s3_trigger.json"
+            }
+        }
+    },
+    "Outputs": {
+        "StackName": {
+            "Description": "Stack Name",
+            "Value": {
+                "Ref": "AWS::StackName"
+            }
+        }
+    },
+    "Parameters": {
+        "ACMARN": {
+            "ConstraintDescription": "must be a verified & valid AWS ARN.",
+            "Description": "AWS Certificate Manager ARN to be used by Elastic Load Balancer for SSL traffic",
+            "Type": "String"
+        },
+        "Application": {
+            "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
+            "Description": "Application Name",
+            "Type": "String"
+        },
+        "Environment": {
+            "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
+            "Description": "Environment Name",
+            "Type": "String"
+        },
+        "HealthCheckPort": {
+            "Description": "Health Check Port",
+            "Type": "String"
+        },
+        "InstanceType": {
+            "AllowedValues": [
+                "t1.micro",
+                "t2.nano",
+                "t2.micro",
+                "t2.small",
+                "t2.medium",
+                "t2.large",
+                "m1.small",
+                "m1.medium",
+                "m1.large",
+                "m1.xlarge",
+                "m2.xlarge",
+                "m2.2xlarge",
+                "m2.4xlarge",
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge",
+                "m4.large",
+                "m4.xlarge",
+                "m4.2xlarge",
+                "m4.4xlarge",
+                "m4.10xlarge",
+                "c1.medium",
+                "c1.xlarge",
+                "c3.large",
+                "c3.xlarge",
+                "c3.2xlarge",
+                "c3.4xlarge",
+                "c3.8xlarge",
+                "c4.large",
+                "c4.xlarge",
+                "c4.2xlarge",
+                "c4.4xlarge",
+                "c4.8xlarge",
+                "g2.2xlarge",
+                "g2.8xlarge",
+                "r3.large",
+                "r3.xlarge",
+                "r3.2xlarge",
+                "r3.4xlarge",
+                "r3.8xlarge",
+                "i2.xlarge",
+                "i2.2xlarge",
+                "i2.4xlarge",
+                "i2.8xlarge",
+                "d2.xlarge",
+                "d2.2xlarge",
+                "d2.4xlarge",
+                "d2.8xlarge",
+                "hi1.4xlarge",
+                "hs1.8xlarge",
+                "cr1.8xlarge",
+                "cc2.8xlarge",
+                "cg1.4xlarge"
+            ],
+            "ConstraintDescription": "must be a valid EC2 instance type.",
+            "Default": "t2.micro",
+            "Description": "EC2 instance type",
+            "Type": "String"
+        },
+        "KeyName": {
+            "ConstraintDescription": "must be the name of an existing EC2 KeyPair.",
+            "Description": "The EC2 Key Pair to allow SSH access to the instances",
+            "Type": "AWS::EC2::KeyPair::KeyName"
+        },
+        "RepoBucket": {
+            "Description": "Repository bucket name",
+            "Type": "String"
+        },
+        "RepoZipPath": {
+            "Description": "Repository zip key path",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "EC2Fleet": {
+            "Properties": {
+                "Parameters": {
+                    "ACMARN": {
+                        "Ref": "ACMARN"
+                    },
+                    "Application": {
+                        "Ref": "Application"
+                    },
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "HealthCheckPort": {
+                        "Ref": "HealthCheckPort"
+                    },
+                    "InstanceType": {
+                        "Ref": "InstanceType"
+                    },
+                    "KeyName": {
+                        "Ref": "KeyName"
+                    }
+                },
+                "TemplateURL": {
+                    "Fn::FindInMap": [
+                        "TemplateURL",
+                        "EC2Fleet",
+                        "url"
+                    ]
+                }
+            },
+            "Type": "AWS::CloudFormation::Stack"
+        },
+        "CodeDeploy": {
+            "Properties": {
+                "Parameters": {
+                    "Application": {
+                        "Ref": "Application"
+                    },
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "EC2CodeDeployCFNStackName": {
+                        "Fn::GetAtt": [
+                            "EC2Fleet",
+                            "Outputs.StackName"
+                        ]
+                    },
+                },
+                "TemplateURL": {
+                    "Fn::FindInMap": [
+                        "TemplateURL",
+                        "CodeDeploy",
+                        "url"
+                    ]
+                }
+            },
+            "Type": "AWS::CloudFormation::Stack"
+        },
+        "AddCodedeployS3Trigger": {
+            "Properties": {
+                "Parameters": {
+                    "Application": {
+                        "Ref": "Application"
+                    },
+                    "Environment": {
+                        "Ref": "Environment"
+                    },
+                    "CodeDeployStackName": {
+                        "Fn::GetAtt": [
+                            "CodeDeploy",
+                            "Outputs.StackName"
+                        ]
+                    },
+                    "RepoBucket": {
+                        "Ref": "RepoBucket"
+                    },
+                    "RepoZipPath": {
+                        "Ref": "RepoZipPath"
+                    }
+                },
+                "TemplateURL": {
+                    "Fn::FindInMap": [
+                        "TemplateURL",
+                        "AddCodedeployS3Trigger",
+                        "url"
+                    ]
+                }
+            },
+            "Type": "AWS::CloudFormation::Stack"
+        }
+    }
+}

@@ -1,0 +1,1058 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "ECS Service",
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "Cloudformation stack dependencies"
+                    },
+                    "Parameters": [
+                        "ECSClusterStackName",
+                        "ECRStackName"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "ECS Attributes"
+                    },
+                    "Parameters": [
+                        "ECRImageTag",
+                        "ECSTaskDesiredCount"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "VPC & Subnets"
+                    },
+                    "Parameters": [
+                        "VPC",
+                        "Subnets"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Tag Value"
+                    },
+                    "Parameters": [
+                        "Environment",
+                        "Application"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Security"
+                    },
+                    "Parameters": [
+                        "ACMARN"
+                    ]
+                }
+            ]
+        }
+    },
+    "Outputs": {
+        "StackName": {
+            "Description": "Stack Name",
+            "Value": {
+                "Ref": "AWS::StackName"
+            }
+        }
+    },
+    "Parameters": {
+        "ACMARN": {
+            "ConstraintDescription": "must be a valid AWS ARN.",
+            "Description": "AWS Certificate Manager ARN to be used in Application Elastic Load Balancer for SSL traffic",
+            "Type": "String"
+        },
+        "Application": {
+            "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
+            "Description": "Application Name",
+            "Type": "String"
+        },
+        "ContainerPort": {
+            "Default": "80",
+            "Description": "ContainerPort",
+            "Type": "Number"
+        },
+        "ECRImageTag": {
+            "Default": "latest",
+            "Description": "Name of the docker image tag",
+            "Type": "String"
+        },
+        "ECRStackName": {
+            "AllowedPattern": "^[a-zA-Z][-a-zA-Z0-9]*$",
+            "Description": "Name of an active CloudFormation stack that contains the ECR resource",
+            "MaxLength": 255,
+            "MinLength": 1,
+            "Type": "String"
+        },
+        "ECSClusterStackName": {
+            "AllowedPattern": "^[a-zA-Z][-a-zA-Z0-9]*$",
+            "Description": "Name of an active CloudFormation stack that contains the ECS Cluster resources",
+            "MaxLength": 255,
+            "MinLength": 1,
+            "Type": "String"
+        },
+        "ECSTaskDesiredCount": {
+            "Default": "0",
+            "Description": "No of ECS task count",
+            "Type": "Number"
+        },
+        "Environment": {
+            "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
+            "Description": "Environment Name",
+            "Type": "String"
+        },
+        "Subnets": {
+            "Description": "Application load balancer Subnets ID",
+            "Type": "CommaDelimitedList"
+        },
+        "VPC": {
+            "Description": "VPC ID for ECS Container Instance and TargetGroups",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "ALBECS": {
+            "Properties": {
+                "LoadBalancerAttributes": [
+                    {
+                        "Key": "idle_timeout.timeout_seconds",
+                        "Value": "30"
+                    }
+                ],
+                "Name": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "ALB",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            },
+                            "ECS"
+                        ]
+                    ]
+                },
+                "Scheme": "internet-facing",
+                "SecurityGroups": [
+                    {
+                        "Ref": "ALBSecurityGroups"
+                    }
+                ],
+                "Subnets": {
+                    "Ref": "Subnets"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    "ALB",
+                                    {
+                                        "Ref": "Application"
+                                    },
+                                    {
+                                        "Ref": "Environment"
+                                    },
+                                    "ECS"
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Application",
+                        "Value": {
+                            "Ref": "Application"
+                        }
+                    }
+                ]
+            },
+            "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer"
+        },
+        "ALBHTTPListener": {
+            "DependsOn": "ECSServiceRole",
+            "Properties": {
+                "DefaultActions": [
+                    {
+                        "TargetGroupArn": {
+                            "Ref": "ALBTargetGroup"
+                        },
+                        "Type": "forward"
+                    }
+                ],
+                "LoadBalancerArn": {
+                    "Ref": "ALBECS"
+                },
+                "Port": 80,
+                "Protocol": "HTTP"
+            },
+            "Type": "AWS::ElasticLoadBalancingV2::Listener"
+        },
+        "ALBHTTPSListener": {
+            "DependsOn": "ECSServiceRole",
+            "Properties": {
+                "Certificates": [
+                    {
+                        "CertificateArn": {
+                            "Ref": "ACMARN"
+                        }
+                    }
+                ],
+                "DefaultActions": [
+                    {
+                        "TargetGroupArn": {
+                            "Ref": "ALBTargetGroup"
+                        },
+                        "Type": "forward"
+                    }
+                ],
+                "LoadBalancerArn": {
+                    "Ref": "ALBECS"
+                },
+                "Port": 443,
+                "Protocol": "HTTPS"
+            },
+            "Type": "AWS::ElasticLoadBalancingV2::Listener"
+        },
+        "ALBSecurityGroups": {
+            "Properties": {
+                "GroupDescription": "ALB Security Group",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    "SecurityGroup",
+                                    "ALB",
+                                    {
+                                        "Ref": "Application"
+                                    },
+                                    {
+                                        "Ref": "Environment"
+                                    }
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Application",
+                        "Value": {
+                            "Ref": "Application"
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "ALBSecurityGroupsHTTPInbound": {
+            "Properties": {
+                "CidrIp": "0.0.0.0/0",
+                "FromPort": 80,
+                "GroupId": {
+                    "Fn::GetAtt": [
+                        "ALBSecurityGroups",
+                        "GroupId"
+                    ]
+                },
+                "IpProtocol": "tcp",
+                "ToPort": 80
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "ALBSecurityGroupsHTTPSInbound": {
+            "Properties": {
+                "CidrIp": "0.0.0.0/0",
+                "FromPort": 443,
+                "GroupId": {
+                    "Fn::GetAtt": [
+                        "ALBSecurityGroups",
+                        "GroupId"
+                    ]
+                },
+                "IpProtocol": "tcp",
+                "ToPort": 443
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "ALBTargetGroup": {
+            "DependsOn": "ALBECS",
+            "Properties": {
+                "HealthCheckIntervalSeconds": 10,
+                "HealthCheckPath": "/",
+                "HealthCheckProtocol": "HTTP",
+                "HealthCheckTimeoutSeconds": 5,
+                "HealthyThresholdCount": 2,
+                "Matcher": {
+                    "HttpCode": "200-301"
+                },
+                "Name": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "TargetGroup",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            }
+                        ]
+                    ]
+                },
+                "Port": 80,
+                "Protocol": "HTTP",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    "TargetGroup",
+                                    {
+                                        "Ref": "Application"
+                                    },
+                                    {
+                                        "Ref": "Environment"
+                                    }
+                                ]
+                            ]
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    },
+                    {
+                        "Key": "Application",
+                        "Value": {
+                            "Ref": "Application"
+                        }
+                    }
+                ],
+                "TargetGroupAttributes": [
+                    {
+                        "Key": "stickiness.enabled",
+                        "Value": "true"
+                    },
+                    {
+                        "Key": "stickiness.type",
+                        "Value": "lb_cookie"
+                    }
+                ],
+                "UnhealthyThresholdCount": 2,
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup"
+        },
+        "AutoScalingRole": {
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "sts:AssumeRole"
+                            ],
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "application-autoscaling.amazonaws.com"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Action": [
+                                        "application-autoscaling:*",
+                                        "cloudwatch:DescribeAlarms",
+                                        "cloudwatch:PutMetricAlarm",
+                                        "ecs:DescribeServices",
+                                        "ecs:UpdateService"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": "*"
+                                }
+                            ]
+                        },
+                        "PolicyName": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    "IAM",
+                                    {
+                                        "Ref": "Application"
+                                    },
+                                    {
+                                        "Ref": "Environment"
+                                    },
+                                    "ASG",
+                                    "Policy"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "RoleName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "IAM",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            },
+                            "ASG",
+                            "Role"
+                        ]
+                    ]
+                }
+            },
+            "Type": "AWS::IAM::Role"
+        },
+        "CPUAlarmHighECS": {
+            "Properties": {
+                "AlarmActions": [
+                    {
+                        "Ref": "ScalingUpPolicyECS"
+                    }
+                ],
+                "AlarmDescription": "Alarm if CPU too high or metric disappears indicating instance is down",
+                "AlarmName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "Alarm",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            },
+                            "CPU",
+                            "High"
+                        ]
+                    ]
+                },
+                "ComparisonOperator": "GreaterThanThreshold",
+                "Dimensions": [
+                    {
+                        "Name": "ClusterName",
+                        "Value": {
+                            "Fn::ImportValue": {
+                                "Fn::Sub": "${ECSClusterStackName}-ECSClusterApp"
+                            }
+                        }
+                    }
+                ],
+                "EvaluationPeriods": "1",
+                "MetricName": "CPUUtilization",
+                "Namespace": "AWS/ECS",
+                "Period": "60",
+                "Statistic": "Sum",
+                "Threshold": "75"
+            },
+            "Type": "AWS::CloudWatch::Alarm"
+        },
+        "CPUAlarmLowECS": {
+            "Properties": {
+                "AlarmActions": [
+                    {
+                        "Ref": "ScalingDownPolicyECS"
+                    }
+                ],
+                "AlarmDescription": "Scale-down if CPU < 75% for 10 minutes",
+                "AlarmName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "Alarm",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            },
+                            "CPU",
+                            "Low"
+                        ]
+                    ]
+                },
+                "ComparisonOperator": "LessThanThreshold",
+                "Dimensions": [
+                    {
+                        "Name": "ClusterName",
+                        "Value": {
+                            "Fn::ImportValue": {
+                                "Fn::Sub": "${ECSClusterStackName}-ECSClusterApp"
+                            }
+                        }
+                    }
+                ],
+                "EvaluationPeriods": 2,
+                "MetricName": "CPUUtilization",
+                "Namespace": "AWS/ECS",
+                "Period": 300,
+                "Statistic": "Sum",
+                "Threshold": 75
+            },
+            "Type": "AWS::CloudWatch::Alarm"
+        },
+        "CloudWatchLogGroupECS": {
+            "Properties": {
+                "LogGroupName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "LogGroup",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            },
+                            "ECS"
+                        ]
+                    ]
+                },
+                "RetentionInDays": 365
+            },
+            "Type": "AWS::Logs::LogGroup"
+        },
+        "ContainerInstanceSecurityGroupsInbound": {
+            "Properties": {
+                "FromPort": 0,
+                "GroupId": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${ECSClusterStackName}-ContainerInstanceSecurityGroups"
+                    }
+                },
+                "IpProtocol": "tcp",
+                "SourceSecurityGroupId": {
+                    "Ref": "ALBSecurityGroups"
+                },
+                "ToPort": 65535
+            },
+            "Type": "AWS::EC2::SecurityGroupIngress"
+        },
+        "ECSService": {
+            "DependsOn": [
+                "ALBHTTPListener",
+                "ALBHTTPSListener"
+            ],
+            "Properties": {
+                "Cluster": {
+                    "Fn::ImportValue": {
+                        "Fn::Sub": "${ECSClusterStackName}-ECSClusterApp"
+                    }
+                },
+                "DeploymentConfiguration": {
+                    "MaximumPercent": 100,
+                    "MinimumHealthyPercent": 50
+                },
+                "DesiredCount": {
+                    "Ref": "ECSTaskDesiredCount"
+                },
+                "LoadBalancers": [
+                    {
+                        "ContainerName": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    "ecs",
+                                    {
+                                        "Ref": "Application"
+                                    },
+                                    {
+                                        "Ref": "Environment"
+                                    }
+                                ]
+                            ]
+                        },
+                        "ContainerPort": {
+                            "Ref": "ContainerPort"
+                        },
+                        "TargetGroupArn": {
+                            "Ref": "ALBTargetGroup"
+                        }
+                    }
+                ],
+                "Role": {
+                    "Ref": "ECSServiceRole"
+                },
+                "TaskDefinition": {
+                    "Ref": "ECSTaskDefinition"
+                }
+            },
+            "Type": "AWS::ECS::Service"
+        },
+        "ECSServiceRole": {
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "sts:AssumeRole"
+                            ],
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "ecs.amazonaws.com"
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Action": [
+                                        "elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
+                                        "elasticloadbalancing:DeregisterTargets",
+                                        "elasticloadbalancing:Describe*",
+                                        "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+                                        "elasticloadbalancing:RegisterTargets",
+                                        "ec2:Describe*",
+                                        "ec2:AuthorizeSecurityGroupIngress"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": "*"
+                                }
+                            ]
+                        },
+                        "PolicyName": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    "IAM",
+                                    {
+                                        "Ref": "Application"
+                                    },
+                                    {
+                                        "Ref": "Environment"
+                                    },
+                                    "ECS",
+                                    "Service",
+                                    "Policy"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "RoleName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "IAM",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            },
+                            "ECS",
+                            "Service",
+                            "Role"
+                        ]
+                    ]
+                }
+            },
+            "Type": "AWS::IAM::Role"
+        },
+        "ECSTaskDefinition": {
+            "Properties": {
+                "ContainerDefinitions": [
+                    {
+                        "Essential": true,
+                        "Image": {
+                            "Fn::Join": [
+                                ":",
+                                [
+                                    {
+                                        "Fn::ImportValue": {
+                                            "Fn::Sub": "${ECRStackName}-ECR-URI"
+                                        }
+                                    },
+                                    {
+                                        "Ref": "ECRImageTag"
+                                    }
+                                ]
+                            ]
+                        },
+                        "LogConfiguration": {
+                            "LogDriver": "awslogs",
+                            "Options": {
+                                "awslogs-group": {
+                                    "Ref": "CloudWatchLogGroupECS"
+                                },
+                                "awslogs-region": {
+                                    "Ref": "AWS::Region"
+                                }
+                            }
+                        },
+                        "MemoryReservation": 512,
+                        "Name": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    "ecs",
+                                    {
+                                        "Ref": "Application"
+                                    },
+                                    {
+                                        "Ref": "Environment"
+                                    }
+                                ]
+                            ]
+                        },
+                        "PortMappings": [
+                            {
+                                "ContainerPort": {
+                                    "Ref": "ContainerPort"
+                                },
+                                "HostPort": 0
+                            }
+                        ]
+                    }
+                ],
+                "Family": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "task",
+                            "def",
+                            "family",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            }
+                        ]
+                    ]
+                },
+                "NetworkMode": "bridge",
+                "TaskRoleArn": {
+                    "Fn::GetAtt": [
+                        "ECSTaskRole",
+                        "Arn"
+                    ]
+                },
+                "Volumes": [
+                    {
+                        "Name": "ecs-vol"
+                    }
+                ]
+            },
+            "Type": "AWS::ECS::TaskDefinition"
+        },
+        "ECSTaskRole": {
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "ecs-tasks.amazonaws.com"
+                            },
+                            "Sid": ""
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
+                ],
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Action": [
+                                        "s3:GetObject",
+                                        "s3:ListBucket"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": "*"
+                                }
+                            ],
+                            "Version": "2012-10-17"
+                        },
+                        "PolicyName": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    "IAM",
+                                    {
+                                        "Ref": "Application"
+                                    },
+                                    {
+                                        "Ref": "Environment"
+                                    },
+                                    "ECS",
+                                    "Task",
+                                    "Policy"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "RoleName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "IAM",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            },
+                            "ECS",
+                            "Task",
+                            "Role"
+                        ]
+                    ]
+                }
+            },
+            "Type": "AWS::IAM::Role"
+        },
+        "MemoryAlarmHighECS": {
+            "Properties": {
+                "AlarmActions": [
+                    {
+                        "Ref": "ScalingUpPolicyECS"
+                    }
+                ],
+                "AlarmDescription": "Alarm if Memory consuption is too high or metric disappears indicating instance is down",
+                "AlarmName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "Alarm",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            },
+                            "Memory",
+                            "High"
+                        ]
+                    ]
+                },
+                "ComparisonOperator": "GreaterThanThreshold",
+                "Dimensions": [
+                    {
+                        "Name": "ClusterName",
+                        "Value": {
+                            "Fn::ImportValue": {
+                                "Fn::Sub": "${ECSClusterStackName}-ECSClusterApp"
+                            }
+                        }
+                    }
+                ],
+                "EvaluationPeriods": "1",
+                "MetricName": "MemoryUtilization",
+                "Namespace": "AWS/ECS",
+                "Period": "60",
+                "Statistic": "Sum",
+                "Threshold": "70"
+            },
+            "Type": "AWS::CloudWatch::Alarm"
+        },
+        "MemoryAlarmLowECS": {
+            "Properties": {
+                "AlarmActions": [
+                    {
+                        "Ref": "ScalingDownPolicyECS"
+                    }
+                ],
+                "AlarmDescription": "Scale-down if Memory consuption < 75% for 10 minutes",
+                "AlarmName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "Alarm",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            },
+                            "Memory",
+                            "Low"
+                        ]
+                    ]
+                },
+                "ComparisonOperator": "LessThanThreshold",
+                "Dimensions": [
+                    {
+                        "Name": "ClusterName",
+                        "Value": {
+                            "Fn::ImportValue": {
+                                "Fn::Sub": "${ECSClusterStackName}-ECSClusterApp"
+                            }
+                        }
+                    }
+                ],
+                "EvaluationPeriods": 2,
+                "MetricName": "MemoryUtilization",
+                "Namespace": "AWS/ECS",
+                "Period": 300,
+                "Statistic": "Sum",
+                "Threshold": 70
+            },
+            "Type": "AWS::CloudWatch::Alarm"
+        },
+        "ScalingDownPolicyECS": {
+            "Properties": {
+                "PolicyName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "App",
+                            "Scaling",
+                            "Down",
+                            "Policy",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            }
+                        ]
+                    ]
+                },
+                "PolicyType": "StepScaling",
+                "ScalingTargetId": {
+                    "Ref": "ServiceScalingTarget"
+                },
+                "StepScalingPolicyConfiguration": {
+                    "AdjustmentType": "ChangeInCapacity",
+                    "Cooldown": 60,
+                    "MetricAggregationType": "Average",
+                    "StepAdjustments": [
+                        {
+                            "MetricIntervalLowerBound": 0,
+                            "ScalingAdjustment": -1
+                        }
+                    ]
+                }
+            },
+            "Type": "AWS::ApplicationAutoScaling::ScalingPolicy"
+        },
+        "ScalingUpPolicyECS": {
+            "Properties": {
+                "PolicyName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "App",
+                            "Scaling",
+                            "Up",
+                            "Policy",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            }
+                        ]
+                    ]
+                },
+                "PolicyType": "StepScaling",
+                "ScalingTargetId": {
+                    "Ref": "ServiceScalingTarget"
+                },
+                "StepScalingPolicyConfiguration": {
+                    "AdjustmentType": "ChangeInCapacity",
+                    "Cooldown": 60,
+                    "MetricAggregationType": "Average",
+                    "StepAdjustments": [
+                        {
+                            "MetricIntervalLowerBound": 0,
+                            "ScalingAdjustment": 1
+                        }
+                    ]
+                }
+            },
+            "Type": "AWS::ApplicationAutoScaling::ScalingPolicy"
+        },
+        "ServiceScalingTarget": {
+            "DependsOn": "ECSService",
+            "Properties": {
+                "MaxCapacity": 40,
+                "MinCapacity": 3,
+                "ResourceId": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "service/",
+                            {
+                                "Fn::ImportValue": {
+                                    "Fn::Sub": "${ECSClusterStackName}-ECSClusterApp"
+                                }
+                            },
+                            "/",
+                            {
+                                "Fn::GetAtt": [
+                                    "ECSService",
+                                    "Name"
+                                ]
+                            }
+                        ]
+                    ]
+                },
+                "RoleARN": {
+                    "Fn::GetAtt": [
+                        "AutoScalingRole",
+                        "Arn"
+                    ]
+                },
+                "ScalableDimension": "ecs:service:DesiredCount",
+                "ServiceNamespace": "ecs"
+            },
+            "Type": "AWS::ApplicationAutoScaling::ScalableTarget"
+        }
+    }
+}
