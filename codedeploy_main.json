@@ -39,7 +39,7 @@
             "Type": "String"
         },
         "HealthCheckPort": {
-            "Description": "Health Check Port",
+            "Description": "Elastic Load Balancer Health Check Port",
             "Type": "String"
         },
         "InstanceType": {
@@ -110,7 +110,7 @@
             "Type": "AWS::EC2::KeyPair::KeyName"
         },
         "RepoBucket": {
-            "Description": "Repository bucket name",
+            "Description": "The name of the bucket where your zipped code will be uploaded",
             "Type": "String"
         },
         "RepoZipPath": {
