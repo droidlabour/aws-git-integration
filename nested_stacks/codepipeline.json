@@ -84,6 +84,11 @@
         "VPC": {
             "Description": "VPC ID for ECS Container Instance and TargetGroups",
             "Type": "AWS::EC2::VPC::Id"
+        },
+        "LambdaArtifactS3Bucket": {
+            "Default": "open-source-artifacts",
+            "Description": "S3 Bucket Name where Lambda Code is stored, must be in the same region where the stack is deployed. Keep the default if your're deploying  it in us-east-1",
+            "Type": "String"
         }
     },
     "Resources": {
@@ -633,7 +638,7 @@
         "Lambda": {
             "Properties": {
                 "Code": {
-                    "S3Bucket": "open-source-artifacts",
+                    "S3Bucket": { "Ref": "LambdaArtifactS3Bucket" },
                     "S3Key": "git_intgrtn_aws_s3/LambdaStageCodePipeline.zip"
                 },
                 "Description": "Gathers and Uploads Cloudformation Parameters, triggered by AWS CodePipeline",

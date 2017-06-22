@@ -23,6 +23,11 @@
         "RepoZipPath": {
             "Description": "Repository zip key path",
             "Type": "String"
+        },
+        "LambdaArtifactS3Bucket": {
+            "Default": "open-source-artifacts",
+            "Description": "S3 Bucket Name where Lambda Code is stored, must be in the same region where the stack is deployed. Keep the default if your're deploying  it in us-east-1",
+            "Type": "String"
         }
     },
     "Resources": {
@@ -141,7 +146,7 @@
         "CodedeployLambdaFunction": {
             "Properties": {
                 "Code": {
-                    "S3Bucket": "open-source-artifacts",
+                    "S3Bucket": { "Ref": "LambdaArtifactS3Bucket" },
                     "S3Key": "git_intgrtn_aws_s3/AddS3LambdaNotification.zip"
                 },
                 "Environment": {
@@ -270,7 +275,7 @@
         "S3NotificationLambdaFunction": {
             "Properties": {
                 "Code": {
-                    "S3Bucket": "open-source-artifacts",
+                    "S3Bucket": { "Ref": "LambdaArtifactS3Bucket" },
                     "S3Key": "git_intgrtn_aws_s3/AddS3LambdaNotification.zip"
                 },
                 "Environment": {

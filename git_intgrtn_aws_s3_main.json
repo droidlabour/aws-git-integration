@@ -170,6 +170,11 @@
             "Default": "",
             "Description": "OPTIONAL: Bucket Name where the zip file output should be placed, if left blank a bucket name will be automatically generated.",
             "Type": "String"
+        },
+        "LambdaArtifactS3Bucket": {
+            "Default": "open-source-artifacts",
+            "Description": "S3 Bucket Name where Lambda Code is stored, must be in the same region where the stack is deployed. Keep the default if your're deploying  it in us-east-1",
+            "Type": "String"
         }
     },
     "Resources": {
@@ -197,7 +202,7 @@
         "CreateSSHKeyLambda": {
             "Properties": {
                 "Code": {
-                    "S3Bucket": "open-source-artifacts",
+                    "S3Bucket": { "Ref": "LambdaArtifactS3Bucket" },
                     "S3Key": "git_intgrtn_aws_s3/CreateSSHKey.zip"
                 },
                 "Handler": "lambda_function.lambda_handler",
@@ -326,7 +331,7 @@
         "DeleteBucketContentsLambda": {
             "Properties": {
                 "Code": {
-                    "S3Bucket": "open-source-artifacts",
+                    "S3Bucket": { "Ref": "LambdaArtifactS3Bucket" },
                     "S3Key": "git_intgrtn_aws_s3/DeleteBucketContents.zip"
                 },
                 "Handler": "lambda_function.lambda_handler",
@@ -438,7 +443,7 @@
         "GitPullLambda": {
             "Properties": {
                 "Code": {
-                    "S3Bucket": "open-source-artifacts",
+                    "S3Bucket": { "Ref": "LambdaArtifactS3Bucket" },
                     "S3Key": "git_intgrtn_aws_s3/GitPull.zip"
                 },
                 "Handler": "lambda_function.lambda_handler",
@@ -1092,7 +1097,7 @@
         "ZipDlLambda": {
             "Properties": {
                 "Code": {
-                    "S3Bucket": "open-source-artifacts",
+                    "S3Bucket": { "Ref": "LambdaArtifactS3Bucket" },
                     "S3Key": "git_intgrtn_aws_s3/ZipDownload.zip"
                 },
                 "Handler": "lambda_function.lambda_handler",

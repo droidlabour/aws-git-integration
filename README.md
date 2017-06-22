@@ -51,6 +51,8 @@ There are two methods you can use to get the contents of a repository. Each meth
 
     **OauthKey/OuathSecret:** Used only with the zip download method described earlier. This is an OAuth2 key and secret provided by Bitbucket.
 
+    **LambdaArtifactS3Bucket:** S3 Bucket Name where Lambda Code is stored, must be in the same region where the stack is deployed. Keep the default if your're deploying  it in us-east-1.
+
     At least one parameter for your chosen method and provider must be set.
     The process for setting up webhook secrets and API tokens differs between vendors and product versions. Consult your Git provider's documentation for details.
     
@@ -88,6 +90,8 @@ Repo zipped will be stored in `OutputBucketName/<git-user-name>/<git-repo-name>/
 `<git-user>/<git-repo-name>/<git-branch-name>/<git-repo-name>.zip`
 Example: For https://github.com/droidlabour/git_intgrtn_aws_s3 `RepoZipPath` will be `droidlabour/git_intgrtn_aws_s3/master/git_intgrtn_aws_s3.zip`
 
+    **LambdaArtifactS3Bucket:** S3 Bucket Name where Lambda Code is stored, must be in the same region where the stack is deployed. Keep the default if your're deploying  it in us-east-1.
+
 3. `ecs_main.json`:
 
     **ACMARN:** AWS Certificate Manager ARN to be used by Elastic Load Balancer for SSL traffic
@@ -119,8 +123,12 @@ Example: For https://github.com/droidlabour/git_intgrtn_aws_s3 `RepoZipPath` wil
     **Subnets:** List of VPC Subnets
 
     **VPC:** VPC ID
+
+    **LambdaArtifactS3Bucket:** S3 Bucket Name where Lambda Code is stored, must be in the same region where the stack is deployed. Keep the default if your're deploying  it in us-east-1.
 4. Use `DNS name` as Alias Record to bind your domain DNS in Route53.
 
-### Contributing
-While creating zip Lambda package, make sure to not provide the parent dir
-For CreateSSHKey it will be `cd CreateSSHKey && zip -r ../CreateSSHKey.zip .`
+### Deploying to region other then us-east-1
+1. Create zip file for `AddS3LambdaNotification`, `CreateSSHKey`, `DeleteBucketContents`, `GitPull`, `LambdaStageCodePipeline` and `ZipDownload` directories
+Note: While creating zip, make sure to not provide the parent dir
+Example: For `CreateSSHKey` it will be `cd CreateSSHKey && zip -r ../CreateSSHKey.zip . && cd ..`
+2. Upload all the zip files to an S3 Bucket under `git_intgrtn_aws_s3` directory in the same region where you want the stack to be deployed.
