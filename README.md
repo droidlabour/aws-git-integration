@@ -92,6 +92,8 @@ Example: For https://github.com/droidlabour/git_intgrtn_aws_s3 `RepoZipPath` wil
 
     **LambdaArtifactS3Bucket:** S3 Bucket Name where Lambda Code is stored, must be in the same region where the stack is deployed. Keep the default if your're deploying  it in us-east-1.
 
+    **RootVolumeSize:** EBS Size for the EC2 Root Volume 
+
 3. `ecs_main.json`:
 
     **ACMARN:** AWS Certificate Manager ARN to be used by Elastic Load Balancer for SSL traffic
