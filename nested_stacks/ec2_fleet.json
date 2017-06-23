@@ -169,7 +169,12 @@
             "ConstraintDescription": "must be the name of an existing EC2 KeyPair.",
             "Description": "The EC2 Key Pair to allow SSH access to the instances",
             "Type": "String"
-        }
+        },
+		"RootVolumeSize": {
+			"Type": "Number",
+			"Description": "EBS Size for the EC2 Root Volume",
+			"Default": "8"
+		}
     },
     "Resources": {
         "CPUAlarmHigh": {
@@ -527,6 +532,14 @@
                 "KeyName": {
                     "Ref": "KeyName"
                 },
+				"BlockDeviceMappings": [ {
+				   "DeviceName": "/dev/xvda", 
+				   "Ebs": {
+					  "DeleteOnTermination": true,
+					  "VolumeSize": { "Ref": "RootVolumeSize" },
+					  "VolumeType": "gp2"
+				   }
+				} ],
                 "SecurityGroups": [
                     {
                         "Ref": "InstanceSecurityGroup"

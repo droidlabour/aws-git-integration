@@ -109,6 +109,11 @@
             "Description": "The EC2 Key Pair to allow SSH access to the instances",
             "Type": "AWS::EC2::KeyPair::KeyName"
         },
+		"RootVolumeSize": {
+			"Type": "Number",
+			"Description": "EBS Size for the EC2 Root Volume",
+			"Default": "8"
+		},
         "RepoBucket": {
             "Description": "The name of the bucket where your zipped code will be uploaded",
             "Type": "String"
@@ -144,6 +149,9 @@
                     },
                     "KeyName": {
                         "Ref": "KeyName"
+                    },
+                    "RootVolumeSize": {
+                        "Ref": "RootVolumeSize"
                     }
                 },
                 "TemplateURL": {
@@ -170,7 +178,7 @@
                             "EC2Fleet",
                             "Outputs.StackName"
                         ]
-                    },
+                    }
                 },
                 "TemplateURL": {
                     "Fn::FindInMap": [
