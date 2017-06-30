@@ -94,6 +94,8 @@ Example: For https://github.com/droidlabour/git_intgrtn_aws_s3 `RepoZipPath` wil
 
     **RootVolumeSize:** EBS Size for the EC2 Root Volume 
 
+    **HealthCheckPath:** Health check path, must start with `/`
+
 3. `ecs_main.json`:
 
     **ACMARN:** AWS Certificate Manager ARN to be used by Elastic Load Balancer for SSL traffic
@@ -127,6 +129,8 @@ Example: For https://github.com/droidlabour/git_intgrtn_aws_s3 `RepoZipPath` wil
     **VPC:** VPC ID
 
     **LambdaArtifactS3Bucket:** S3 Bucket Name where Lambda Code is stored, must be in the same region where the stack is deployed. Keep the default if your're deploying  it in us-east-1.
+
+    **HealthCheckPath:** Health check path, must start with `/`
 4. Use `DNS name` as Alias Record to bind your domain DNS in Route53.
 
 ### Deploying to region other then us-east-1
