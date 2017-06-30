@@ -42,6 +42,12 @@
             "Description": "Elastic Load Balancer Health Check Port",
             "Type": "String"
         },
+        "HealthCheckPath": {
+            "ConstraintDescription": "must start with /",
+            "Description": "Health Check Path",
+			"Default": "/",
+            "Type": "String"
+        },
         "InstanceType": {
             "AllowedValues": [
                 "t1.micro",
@@ -109,22 +115,12 @@
             "Description": "The EC2 Key Pair to allow SSH access to the instances",
             "Type": "AWS::EC2::KeyPair::KeyName"
         },
-		"RootVolumeSize": {
-			"Type": "Number",
-			"Description": "EBS Size for the EC2 Root Volume",
-			"Default": "8"
-		},
         "RepoBucket": {
             "Description": "The name of the bucket where your zipped code will be uploaded",
             "Type": "String"
         },
         "RepoZipPath": {
             "Description": "Repository zip key path",
-            "Type": "String"
-        },
-        "LambdaArtifactS3Bucket": {
-            "Default": "open-source-artifacts",
-            "Description": "S3 Bucket Name where Lambda Code is stored, must be in the same region where the stack is deployed. Keep the default if your're deploying  it in us-east-1",
             "Type": "String"
         }
     },
@@ -144,14 +140,14 @@
                     "HealthCheckPort": {
                         "Ref": "HealthCheckPort"
                     },
+                    "HealthCheckPath": {
+                        "Ref": "HealthCheckPath"
+                    },
                     "InstanceType": {
                         "Ref": "InstanceType"
                     },
                     "KeyName": {
                         "Ref": "KeyName"
-                    },
-                    "RootVolumeSize": {
-                        "Ref": "RootVolumeSize"
                     }
                 },
                 "TemplateURL": {
@@ -210,9 +206,6 @@
                     },
                     "RepoZipPath": {
                         "Ref": "RepoZipPath"
-                    },
-                    "LambdaArtifactS3Bucket": {
-                        "Ref": "LambdaArtifactS3Bucket"
                     }
                 },
                 "TemplateURL": {

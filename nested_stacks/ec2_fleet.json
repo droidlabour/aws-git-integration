@@ -103,6 +103,12 @@
             "Description": "Health Check Port",
             "Type": "String"
         },
+        "HealthCheckPath": {
+            "ConstraintDescription": "must start with /",
+            "Description": "Health Check Path",
+			"Default": "/",
+            "Type": "String"
+        },
         "InstanceType": {
             "AllowedValues": [
                 "t1.micro",
@@ -169,12 +175,7 @@
             "ConstraintDescription": "must be the name of an existing EC2 KeyPair.",
             "Description": "The EC2 Key Pair to allow SSH access to the instances",
             "Type": "String"
-        },
-		"RootVolumeSize": {
-			"Type": "Number",
-			"Description": "EBS Size for the EC2 Root Volume",
-			"Default": "8"
-		}
+        }
     },
     "Resources": {
         "CPUAlarmHigh": {
@@ -339,12 +340,15 @@
                     "Interval": "30",
                     "Target": {
                         "Fn::Join": [
-                            ":",
+                            "",
                             [
-                                "TCP",
+                                "HTTP:",
                                 {
                                     "Ref": "HealthCheckPort"
-                                }
+                                },
+								{
+									"Ref": "HealthCheckPath"
+								}
                             ]
                         ]
                     },
@@ -532,14 +536,6 @@
                 "KeyName": {
                     "Ref": "KeyName"
                 },
-				"BlockDeviceMappings": [ {
-				   "DeviceName": "/dev/sda1", 
-				   "Ebs": {
-					  "DeleteOnTermination": true,
-					  "VolumeSize": { "Ref": "RootVolumeSize" },
-					  "VolumeType": "gp2"
-				   }
-				} ],
                 "SecurityGroups": [
                     {
                         "Ref": "InstanceSecurityGroup"
@@ -558,6 +554,9 @@
                                 "apt-get install -y python-pip ruby2.0 curl apt-transport-https ca-certificates\n",
                                 "pip install -U pip\n",
                                 "pip install awscli\n",
+                                "curl -L https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install > ./install\n",
+                                "chmod +x ./install\n",
+                                "./install auto\n",
                                 "apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D\n",
                                 "echo \"deb https://apt.dockerproject.org/repo ubuntu-trusty main\" > /etc/apt/sources.list.d/docker.list\n",
                                 "apt-get update\n",
@@ -569,10 +568,7 @@
                                 "apt-get update\n",
                                 "apt-get install -y docker-engine\n",
                                 "service docker restart\n",
-                                "pip install docker-compose\n",
-                                "curl -L https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install > ./install\n",
-                                "chmod +x ./install\n",
-                                "./install auto\n"
+                                "pip install docker-compose\n"
                             ]
                         ]
                     }

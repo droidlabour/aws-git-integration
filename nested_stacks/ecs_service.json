@@ -108,6 +108,12 @@
             "Description": "Application load balancer Subnets ID",
             "Type": "CommaDelimitedList"
         },
+        "HealthCheckPath": {
+            "ConstraintDescription": "must start with /",
+            "Description": "Health Check Path",
+            "Default": "/",
+            "Type": "String"
+        },
         "VPC": {
             "Description": "VPC ID for ECS Container Instance and TargetGroups",
             "Type": "String"
@@ -301,7 +307,7 @@
             "DependsOn": "ALBECS",
             "Properties": {
                 "HealthCheckIntervalSeconds": 10,
-                "HealthCheckPath": "/",
+                "HealthCheckPath": { "Ref": "HealthCheckPath" },
                 "HealthCheckProtocol": "HTTP",
                 "HealthCheckTimeoutSeconds": 5,
                 "HealthyThresholdCount": 2,

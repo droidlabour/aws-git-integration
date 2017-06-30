@@ -150,6 +150,12 @@
             "Description": "Application load balancer Subnets ID",
             "Type": "List<AWS::EC2::Subnet::Id>"
         },
+        "HealthCheckPath": {
+            "ConstraintDescription": "must start with /",
+            "Description": "Health Check Path",
+            "Default": "/",
+            "Type": "String"
+        },
         "VPC": {
             "Description": "VPC ID for ECS Container Instance and TargetGroups",
             "Type": "AWS::EC2::VPC::Id"
@@ -201,6 +207,9 @@
                                 "Ref": "Subnets"
                             }
                         ]
+                    },
+                    "HealthCheckPath": {
+                        "Ref": "HealthCheckPath"
                     },
                     "VPC": {
                         "Ref": "VPC"
