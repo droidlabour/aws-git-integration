@@ -137,7 +137,7 @@
     "Parameters": {
         "AllowedIps": {
             "Default": "131.103.20.160/27,165.254.145.0/26,104.192.143.0/24",
-            "Description": "git pull method only. Comma seperated list of IP CIDR blocks for source IP authentication. The BitBucket Cloud IP ranges are provided as defaults.",
+            "Description": "git pull method only. Comma seperated list of IP CIDR blocks for source IP authentication. The BitBucket Cloud IP ranges are provided as defaults. Use 192.30.252.0/22,185.199.108.0/22 for Github",
             "Type": "String"
         },
         "ApiSecret": {
