@@ -139,7 +139,8 @@ def lambda_handler(event,context):
     try:
         repo_name = event['body-json']['project']['path_with_namespace']
     except:
-        repo_name = event['body-json']['repository']['full_name']
+        branch_name = event['body-json']['ref'].replace('refs/heads/', '')
+        repo_name = event['body-json']['repository']['full_name'] + '/' + branch_name
     try:
         remote_url = event['body-json']['project']['git_ssh_url']
     except:

@@ -115,6 +115,14 @@
             "Description": "The EC2 Key Pair to allow SSH access to the instances",
             "Type": "AWS::EC2::KeyPair::KeyName"
         },
+		"Subnets": {
+          "Type": "List<AWS::EC2::Subnet::Id>",
+          "Description": "The list of SubnetIds, for at least two Availability Zones in the region in your Virtual Private Cloud (VPC) Defaults: "
+        },
+        "VPC": {
+            "Description": "VPC ID for EC2 and Elastic Load Balancer",
+            "Type": "AWS::EC2::VPC::Id"
+        },
         "RepoBucket": {
             "Description": "The name of the bucket where your zipped code will be uploaded",
             "Type": "String"
@@ -148,6 +156,17 @@
                     },
                     "KeyName": {
                         "Ref": "KeyName"
+                    },
+                    "Subnets": {
+                        "Fn::Join": [
+                            ",",
+                            {
+                                "Ref": "Subnets"
+                            }
+                        ]
+                    },
+                    "VPC": {
+                        "Ref": "VPC"
                     }
                 },
                 "TemplateURL": {

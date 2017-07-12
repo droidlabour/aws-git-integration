@@ -175,6 +175,14 @@
             "ConstraintDescription": "must be the name of an existing EC2 KeyPair.",
             "Description": "The EC2 Key Pair to allow SSH access to the instances",
             "Type": "String"
+        },
+		"Subnets": {
+          "Type": "CommaDelimitedList",
+          "Description": "The list of SubnetIds, for at least two Availability Zones in the region in your Virtual Private Cloud (VPC) Defaults: "
+        },
+        "VPC": {
+            "Description": "VPC ID for EC2 and Elastic Load Balancer",
+            "Type": "String"
         }
     },
     "Resources": {
@@ -232,9 +240,6 @@
         },
         "DockerHostGroup": {
             "Properties": {
-                "AvailabilityZones": {
-                    "Fn::GetAZs": ""
-                },
                 "LaunchConfigurationName": {
                     "Ref": "LaunchConfig"
                 },
@@ -277,7 +282,10 @@
                             "Ref": "Environment"
                         }
                     }
-                ]
+                ],
+				"VPCZoneIdentifier": {
+					"Ref": "Subnets"
+				}
             },
             "Type": "AWS::AutoScaling::AutoScalingGroup"
         },
@@ -331,8 +339,11 @@
         },
         "ElasticLoadBalancer": {
             "Properties": {
-                "AvailabilityZones": {
-                    "Fn::GetAZs": ""
+				"SecurityGroups" : [
+					{ "Ref" : "ELBSecurityGroup" }
+				],
+                "Subnets": {
+                    "Ref": "Subnets"
                 },
                 "CrossZone": "true",
                 "HealthCheck": {
@@ -416,6 +427,13 @@
                             "Statement": [
                                 {
                                     "Action": [
+                                        "ec2:DescribeTags"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Action": [
                                         "s3:Get*",
                                         "s3:List*"
                                     ],
@@ -482,16 +500,10 @@
                             "Ref": "HealthCheckPort"
                         },
                         "IpProtocol": "tcp",
-                        "SourceSecurityGroupName": {
+                        "SourceSecurityGroupId": {
                             "Fn::GetAtt": [
-                                "ElasticLoadBalancer",
-                                "SourceSecurityGroup.GroupName"
-                            ]
-                        },
-                        "SourceSecurityGroupOwnerId": {
-                            "Fn::GetAtt": [
-                                "ElasticLoadBalancer",
-                                "SourceSecurityGroup.OwnerAlias"
+                                "ELBSecurityGroup",
+                                "GroupId"
                             ]
                         },
                         "ToPort": {
@@ -512,7 +524,47 @@
                             "Ref": "Environment"
                         }
                     }
-                ]
+                ],
+				"VpcId": {
+					"Ref": "VPC"
+				}
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "ELBSecurityGroup": {
+            "Properties": {
+                "GroupDescription": "Enable public access HTTP and HTTPS",
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "80",
+                        "IpProtocol": "tcp",
+                        "ToPort": "80"
+                    },
+					{
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "443",
+                        "IpProtocol": "tcp",
+                        "ToPort": "443"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Application",
+                        "Value": {
+                            "Ref": "Application"
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    }
+                ],
+				"VpcId": {
+					"Ref": "VPC"
+				}
             },
             "Type": "AWS::EC2::SecurityGroup"
         },
@@ -537,9 +589,12 @@
                     "Ref": "KeyName"
                 },
                 "SecurityGroups": [
-                    {
-                        "Ref": "InstanceSecurityGroup"
-                    }
+					{
+						"Fn::GetAtt": [
+							"InstanceSecurityGroup",
+							"GroupId"
+						]
+					}
                 ],
                 "UserData": {
                     "Fn::Base64": {
@@ -547,6 +602,7 @@
                             "",
                             [
                                 "#!/bin/bash -x\n",
+								"set -e -x\n",
                                 "exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1\n",
                                 "export LC_CTYPE=en_US.UTF-8\n",
                                 "export LC_ALL=en_US.UTF-8\n",
@@ -568,7 +624,12 @@
                                 "apt-get update\n",
                                 "apt-get install -y docker-engine\n",
                                 "service docker restart\n",
-                                "pip install docker-compose\n"
+                                "pip install docker-compose\n",
+								"export ENV=",
+								{
+									"Ref": "Environment"
+								},
+								" >> /etc/environment\n"
                             ]
                         ]
                     }
