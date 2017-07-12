@@ -18,27 +18,28 @@ The project consists of 3 Cloudformation templates each of which can be deployed
 ### Architectural Overview
 ![Architectural diagram](https://github.com/droidlabour/git_intgrtn_aws_s3/raw/master/cloudcraft.png)
 
-1. `git_intgrtn_aws_s3_main.json`: Integrate 3rd party git providers with AWS S3.
-Webhooks notify a remote service by issuing an HTTP POST when a commit is pushed to the repository. [AWS Lambda](http://aws.amazon.com/lambda) receives the HTTP POST through [Amazon API Gateway](https://aws.amazon.com/api-gateway), and then downloads a copy of the repository. It places a zipped copy of the repository into a versioned S3 bucket. [AWS CodePipeline](http://aws.amazon.com/codepipeline) can then use the zip file in S3 as a source; the pipeline will be triggered whenever the Git repository is updated.
+1. `git_intgrtn_aws_s3_main.json`:
 
-There are two methods you can use to get the contents of a repository. Each method exposes Lambda functions that have different security and scalability properties.
+    Webhooks notify a remote service by issuing an HTTP POST when a commit is pushed to the repository. [AWS Lambda](http://aws.amazon.com/lambda) receives the HTTP POST through [Amazon API Gateway](https://aws.amazon.com/api-gateway), and then downloads a copy of the repository. It places a zipped copy of the repository into a versioned S3 bucket. [AWS CodePipeline](http://aws.amazon.com/codepipeline) can then use the zip file in S3 as a source; the pipeline will be triggered whenever the Git repository is updated.
 
-- **Zip download** uses the Git provider's HTTP API to download an already-zipped copy of the current state of the repository.
-    - No need for external libraries.
-    - Smaller Lambda function code.
-    - Large repo size limit (500 MB).
+    There are two methods you can use to get the contents of a repository. Each method exposes Lambda functions that have different security and scalability properties.
 
-- **Git pull** uses SSH to pull from the repository. The repository contents are then zipped and uploaded to S3.
-    - Efficient for repositories with a high volume of commits, because each time the API is triggered, it downloads only the changed files.
-    - Suitable for any Git server that supports hooks and SSH; does not depend on personal access tokens or OAuth2.
-    - More extensible because it uses a standard Git library.
+    - **Zip download** uses the Git provider's HTTP API to download an already-zipped copy of the current state of the repository.
+        - No need for external libraries.
+        - Smaller Lambda function code.
+        - Large repo size limit (500 MB).
 
-2. `codedeploy_main.json`:
+    - **Git pull** uses SSH to pull from the repository. The repository contents are then zipped and uploaded to S3.
+        - Efficient for repositories with a high volume of commits, because each time the API is triggered, it downloads only the changed files.
+        - Suitable for any Git server that supports hooks and SSH; does not depend on personal access tokens or OAuth2.
+        - More extensible because it uses a standard Git library.
+
+2. `codedeploy_main.json` creates
     * Multi-AZ, load balanced and auto scaled (CPU Utilization) pre-installed with **CodeDeploy Agent**, **Docker** and **docker-compose**.
     * AWS CodeDeploy Application and DeploymentGroup.
     * Trigger CodeDeploy on `s3:ObjectCreated:*`
 
-3. `ecs_main.json`: 
+3. `ecs_main.json` creates
     * ECS Cluster
     * ECR Repository
     * ECS Service and Task Definition
