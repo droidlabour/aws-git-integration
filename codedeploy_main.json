@@ -4,13 +4,13 @@
     "Mappings": {
         "TemplateURL": {
             "EC2Fleet": {
-                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/ec2_fleet.json"
+                "url": "https://s3.amazonaws.com/contentlayers-deployment/git_intgrtn_aws_s3/ec2_fleet.json"
             },
             "CodeDeploy": {
-                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/codedeploy.json"
+                "url": "https://s3.amazonaws.com/contentlayers-deployment/git_intgrtn_aws_s3/codedeploy.json"
             },
             "AddCodedeployS3Trigger": {
-                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/add_codedeploy_s3_trigger.json"
+                "url": "https://s3.amazonaws.com/contentlayers-deployment/git_intgrtn_aws_s3/add_codedeploy_s3_trigger.json"
             }
         }
     },

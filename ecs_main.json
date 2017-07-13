@@ -4,16 +4,16 @@
     "Mappings": {
         "TemplateURL": {
             "APP": {
-                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/ecs_service.json"
+                "url": "https://s3.amazonaws.com/contentlayers-deployment/git_intgrtn_aws_s3/ecs_service.json"
             },
             "CodePipeline": {
-                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/codepipeline.json"
+                "url": "https://s3.amazonaws.com/contentlayers-deployment/git_intgrtn_aws_s3/codepipeline.json"
             },
             "ECR": {
-                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/ecs_registry.json"
+                "url": "https://s3.amazonaws.com/contentlayers-deployment/git_intgrtn_aws_s3/ecs_registry.json"
             },
             "ECSCluster": {
-                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/ecs_cluster.json"
+                "url": "https://s3.amazonaws.com/contentlayers-deployment/git_intgrtn_aws_s3/ecs_cluster.json"
             }
         }
     },
@@ -161,7 +161,7 @@
             "Type": "AWS::EC2::VPC::Id"
         },
         "LambdaArtifactS3Bucket": {
-            "Default": "open-source-artifacts",
+            "Default": "contentlayers-deployment",
             "Description": "S3 Bucket Name where Lambda Code is stored, must be in the same region where the stack is deployed. Keep the default if your're deploying  it in us-east-1",
             "Type": "String"
         }
