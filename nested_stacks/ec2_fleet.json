@@ -186,6 +186,52 @@
         }
     },
     "Resources": {
+		"EFSFileSystem": {
+			"Type" : "AWS::EFS::FileSystem",
+			"Properties" : {
+				"FileSystemTags" : [
+					{
+						"Key": "Name",
+						"Value": {
+							"Ref": "Application"
+						}
+					}
+				],
+				"PerformanceMode" : "generalPurpose"
+			}
+		},
+		"EFSMountTarget1": {
+			"Type" : "AWS::EFS::MountTarget",
+			"Properties" : {
+				"FileSystemId" : { "Ref": "EFSFileSystem" },
+				"SecurityGroups" : [ { "Fn::GetAtt": [ "EFSSecurityGroup", "GroupId" ] } ],
+				"SubnetId" : { "Fn::Select" : [ 0, { "Ref": "Subnets" } ] }
+			}
+		},
+		"EFSMountTarget2": {
+			"Type" : "AWS::EFS::MountTarget",
+			"Properties" : {
+				"FileSystemId" : { "Ref": "EFSFileSystem" },
+				"SecurityGroups" : [ { "Fn::GetAtt": [ "EFSSecurityGroup", "GroupId" ] } ],
+				"SubnetId" : { "Fn::Select" : [ 1, { "Ref": "Subnets" } ] }
+			}
+		},
+		"EFSMountTarget3": {
+			"Type" : "AWS::EFS::MountTarget",
+			"Properties" : {
+				"FileSystemId" : { "Ref": "EFSFileSystem" },
+				"SecurityGroups" : [ { "Fn::GetAtt": [ "EFSSecurityGroup", "GroupId" ] } ],
+				"SubnetId" : { "Fn::Select" : [ 2, { "Ref": "Subnets" } ] }
+			}
+		},
+		"EFSMountTarget4": {
+			"Type" : "AWS::EFS::MountTarget",
+			"Properties" : {
+				"FileSystemId" : { "Ref": "EFSFileSystem" },
+				"SecurityGroups" : [ { "Fn::GetAtt": [ "EFSSecurityGroup", "GroupId" ] } ],
+				"SubnetId" : { "Fn::Select" : [ 3, { "Ref": "Subnets" } ] }
+			}
+		},
         "CPUAlarmHigh": {
             "Properties": {
                 "AlarmActions": [
@@ -568,6 +614,42 @@
             },
             "Type": "AWS::EC2::SecurityGroup"
         },
+		"EFSSecurityGroup": {
+		  "Type": "AWS::EC2::SecurityGroup",
+		  "Properties": {
+                "GroupDescription": "Enable NFS access from EC2",
+				"SecurityGroupIngress": [
+					{
+                        "FromPort": "2049",
+                        "IpProtocol": "tcp",
+                        "ToPort": "2049",
+                        "SourceSecurityGroupId": {
+                            "Fn::GetAtt": [
+                                "InstanceSecurityGroup",
+                                "GroupId"
+                            ]
+                        }
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "Application",
+                        "Value": {
+                            "Ref": "Application"
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    }
+                ],
+				"VpcId": {
+					"Ref": "VPC"
+				}
+		  }
+		},
         "LaunchConfig": {
             "Properties": {
                 "IamInstanceProfile": {
@@ -607,12 +689,9 @@
                                 "export LC_CTYPE=en_US.UTF-8\n",
                                 "export LC_ALL=en_US.UTF-8\n",
                                 "apt-get update\n",
-                                "apt-get install -y python-pip ruby2.0 curl apt-transport-https ca-certificates\n",
+                                "apt-get install -y python-pip ruby2.0 curl apt-transport-https ca-certificates nfs-common\n",
                                 "pip install -U pip\n",
                                 "pip install awscli\n",
-                                "curl -L https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install > ./install\n",
-                                "chmod +x ./install\n",
-                                "./install auto\n",
                                 "apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D\n",
                                 "echo \"deb https://apt.dockerproject.org/repo ubuntu-trusty main\" > /etc/apt/sources.list.d/docker.list\n",
                                 "apt-get update\n",
@@ -629,7 +708,29 @@
 								{
 									"Ref": "Environment"
 								},
-								" >> /etc/environment\n"
+								" >> /etc/environment",
+								"\n",
+								"EC2_REGION=",
+								{
+										"Ref": "AWS::Region"
+								},
+								"\n",
+								"DIR_TGT=/mnt/efs/",
+								{
+									"Ref" : "Environment"
+								},
+								"\n",
+								"EFS_FILE_SYSTEM_ID=",
+								{
+									"Ref" : "EFSFileSystem"
+								},
+								"\n",
+								"mkdir -p $DIR_TGT\n",
+								"DIR_SRC=$EFS_FILE_SYSTEM_ID.efs.$EC2_REGION.amazonaws.com\n",
+								"mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 $DIR_SRC:/ $DIR_TGT\n",
+                                "curl -L https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install > ./install\n",
+                                "chmod +x ./install\n",
+                                "./install auto\n"
                             ]
                         ]
                     }
