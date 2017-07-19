@@ -64,6 +64,8 @@ def lambda_handler(event, context):
     elif 'User-Agent' in event['params']['header'].keys():
         if event['params']['header']['User-Agent'].startswith('Bitbucket-Webhooks'):
             hostflavour = 'bitbucket'
+        elif event['params']['header']['User-Agent'].startswith('GitHub-Hookshot'):
+            hostflavour = 'github'
     headers = {}
     branch = 'master'
     if hostflavour == 'githubent':
@@ -72,6 +74,15 @@ def lambda_handler(event, context):
         name = event['body-json']['repository']['name']
         # replace the code archive download and branch reference placeholders
         archive_url = archive_url.replace('{archive_format}', 'zipball').replace('{/ref}', '/master')
+        # add access token information to archive url
+        archive_url = archive_url+'?access_token='+OAUTH_token
+    elif hostflavour == 'github':
+        archive_url = event['body-json']['repository']['archive_url']
+        owner = event['body-json']['repository']['owner']['login']
+        name = event['body-json']['repository']['name']
+        # replace the code archive download and branch reference placeholders
+        branch_name = event['body-json']['ref'].replace('refs/heads/', '')
+        archive_url = archive_url.replace('{archive_format}', 'zipball').replace('{/ref}', '/' + branch_name)
         # add access token information to archive url
         archive_url = archive_url+'?access_token='+OAUTH_token
     elif hostflavour == 'gitlab':
