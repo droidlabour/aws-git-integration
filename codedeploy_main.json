@@ -4,13 +4,13 @@
     "Mappings": {
         "TemplateURL": {
             "EC2Fleet": {
-                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/ec2_fleet.json"
+                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/without-ssl/ec2_fleet.json"
             },
             "CodeDeploy": {
-                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/codedeploy.json"
+                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/without-ssl/codedeploy.json"
             },
             "AddCodedeployS3Trigger": {
-                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/add_codedeploy_s3_trigger.json"
+                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/without-ssl/add_codedeploy_s3_trigger.json"
             }
         }
     },
@@ -23,11 +23,6 @@
         }
     },
     "Parameters": {
-        "ACMARN": {
-            "ConstraintDescription": "must be a verified & valid AWS ARN.",
-            "Description": "AWS Certificate Manager ARN to be used by Elastic Load Balancer for SSL traffic",
-            "Type": "String"
-        },
         "Application": {
             "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
             "Description": "Application Name",
@@ -136,9 +131,6 @@
         "EC2Fleet": {
             "Properties": {
                 "Parameters": {
-                    "ACMARN": {
-                        "Ref": "ACMARN"
-                    },
                     "Application": {
                         "Ref": "Application"
                     },
