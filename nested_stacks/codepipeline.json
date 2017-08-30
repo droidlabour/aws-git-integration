@@ -21,11 +21,6 @@
         }
     },
     "Parameters": {
-        "ACMARN": {
-            "ConstraintDescription": "must be a valid AWS ARN.",
-            "Description": "AWS Certificate Manager ARN to be used in Application Elastic Load Balancer for SSL traffic",
-            "Type": "String"
-        },
         "APPStackName": {
             "Description": "ECS_APP Production Cloudformation Stack Name",
             "Type": "String"
@@ -349,6 +344,12 @@
                                 "Fn::ImportValue": {
                                     "Fn::Sub": "${ECRStackName}-ECR-URI"
                                 }
+                            }
+                        },
+                        {
+                            "Name": "ECR_REGION",
+                            "Value": {
+                                "Ref": "AWS::Region"
                             }
                         }
                     ],

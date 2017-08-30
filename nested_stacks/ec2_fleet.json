@@ -84,11 +84,6 @@
         }
     },
     "Parameters": {
-        "ACMARN": {
-            "ConstraintDescription": "must be a verified & valid AWS ARN.",
-            "Description": "AWS Certificate Manager ARN to be used by Elastic Load Balancer for SSL traffic",
-            "Type": "String"
-        },
         "Application": {
             "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
             "Description": "Application Name",
@@ -373,16 +368,6 @@
                         },
                         "LoadBalancerPort": "80",
                         "Protocol": "HTTP"
-                    },
-                    {
-                        "InstancePort": {
-                            "Ref": "HealthCheckPort"
-                        },
-                        "LoadBalancerPort": "443",
-                        "Protocol": "HTTPS",
-                        "SSLCertificateId": {
-                            "Ref": "ACMARN"
-                        }
                     }
                 ],
                 "Tags": [
