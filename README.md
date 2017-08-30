@@ -2,9 +2,9 @@
 Integrates 3rd party git providers (Github, Bitbucket, GitHub Enterprise or GitLab) with AWS S3, and deploy via CodeDeploy or CodePipeline.
 
 The project consists of 3 Cloudformation templates each of which can be deployed independent of each other.
-1. `git_intgrtn_aws_s3_main.json`: Integrate 3rd party git providers with AWS S3.
-2. `codedeploy_main.json`: Deploy from AWS S3 using AWS CodeDeploy. (**Repository must contain a valid `appspec.yml`**)
-3. `ecs_main.json`: Deploy from AWS S3 using AWS CodePipeline. (**Deployment via CodePipeline works only under AWS ECS**)
+1. `git_intgrtn_aws_s3_main.json`: Creates integration between AWS S3 and 3rd party git providers.
+2. `codedeploy_main.json`: Creates EC2 with pre-installed CodeDeploy agent and all other required resources. (**Repository must contain a valid `appspec.yml`**)
+3. `ecs_main.json`: Creates AWS CodePipeline that will deploy from S3. (**Deployment via CodePipeline works only under AWS ECS**)
 
 
 ### PreRequisites
