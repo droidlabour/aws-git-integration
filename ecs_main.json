@@ -4,16 +4,16 @@
     "Mappings": {
         "TemplateURL": {
             "APP": {
-                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/ecs_service.json"
+                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/without-ssl/ecs_service.json"
             },
             "CodePipeline": {
-                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/codepipeline.json"
+                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/without-ssl/codepipeline.json"
             },
             "ECR": {
-                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/ecs_registry.json"
+                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/without-ssl/ecs_registry.json"
             },
             "ECSCluster": {
-                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/ecs_cluster.json"
+                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/without-ssl/ecs_cluster.json"
             }
         }
     },
@@ -26,11 +26,6 @@
         }
     },
     "Parameters": {
-        "ACMARN": {
-            "ConstraintDescription": "must be a valid AWS ARN.",
-            "Description": "AWS Certificate Manager ARN to be used in Application Elastic Load Balancer for SSL traffic",
-            "Type": "String"
-        },
         "Application": {
             "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
             "Description": "Application Name",
@@ -170,9 +165,6 @@
         "APP": {
             "Properties": {
                 "Parameters": {
-                    "ACMARN": {
-                        "Ref": "ACMARN"
-                    },
                     "Application": {
                         "Ref": "Application"
                     },
@@ -228,9 +220,6 @@
         "CodePipeline": {
             "Properties": {
                 "Parameters": {
-                    "ACMARN": {
-                        "Ref": "ACMARN"
-                    },
                     "ECSAPPStackName": {
                         "Fn::GetAtt": [
                             "APP",

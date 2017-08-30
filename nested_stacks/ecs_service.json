@@ -40,14 +40,6 @@
                         "Application"
                     ]
                 },
-                {
-                    "Label": {
-                        "default": "Security"
-                    },
-                    "Parameters": [
-                        "ACMARN"
-                    ]
-                }
             ]
         }
     },
@@ -60,11 +52,6 @@
         }
     },
     "Parameters": {
-        "ACMARN": {
-            "ConstraintDescription": "must be a valid AWS ARN.",
-            "Description": "AWS Certificate Manager ARN to be used in Application Elastic Load Balancer for SSL traffic",
-            "Type": "String"
-        },
         "Application": {
             "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
             "Description": "Application Name",
@@ -203,32 +190,6 @@
                 },
                 "Port": 80,
                 "Protocol": "HTTP"
-            },
-            "Type": "AWS::ElasticLoadBalancingV2::Listener"
-        },
-        "ALBHTTPSListener": {
-            "DependsOn": "ECSServiceRole",
-            "Properties": {
-                "Certificates": [
-                    {
-                        "CertificateArn": {
-                            "Ref": "ACMARN"
-                        }
-                    }
-                ],
-                "DefaultActions": [
-                    {
-                        "TargetGroupArn": {
-                            "Ref": "ALBTargetGroup"
-                        },
-                        "Type": "forward"
-                    }
-                ],
-                "LoadBalancerArn": {
-                    "Ref": "ALBECS"
-                },
-                "Port": 443,
-                "Protocol": "HTTPS"
             },
             "Type": "AWS::ElasticLoadBalancingV2::Listener"
         },
@@ -577,8 +538,7 @@
         },
         "ECSService": {
             "DependsOn": [
-                "ALBHTTPListener",
-                "ALBHTTPSListener"
+                "ALBHTTPListener"
             ],
             "Properties": {
                 "Cluster": {

@@ -8,7 +8,6 @@ The project consists of 3 Cloudformation templates each of which can be deployed
 
 
 ### PreRequisites
-* ACM verified certificate
 * EC2 KeyPair
 * IAM user attached with Administrator policy
 * Repository hosted in Github/Bitbucket/GitHub Enterprise or GitLab
