@@ -45,6 +45,8 @@ The project consists of 3 Cloudformation templates each of which can be deployed
     * ECS Service and Task Definition
     * CodePipeline with CodeBuild and Deployment using Cloudformation
 
+4. `buildspec.yml` can be used to build on AWS CodeBuild.
+
 ### Deploying to region other then us-east-1
 1. Create zip file for `AddS3LambdaNotification`, `CreateSSHKey`, `DeleteBucketContents`, `GitPull`, `LambdaStageCodePipeline` and `ZipDownload` directories
 Note: While creating zip, make sure to not provide the parent dir
