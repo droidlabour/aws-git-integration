@@ -159,6 +159,10 @@
             "Default": "open-source-artifacts",
             "Description": "S3 Bucket Name where Lambda Code is stored, must be in the same region where the stack is deployed. Keep the default if your're deploying  it in us-east-1",
             "Type": "String"
+        },
+        "SNSTopicEmailAddress": {
+            "Description": "Email Address for Manual Approval of Deployment",
+            "Type": "String"
         }
     },
     "Resources": {
@@ -269,6 +273,9 @@
                     },
                     "LambdaArtifactS3Bucket": {
                         "Ref": "LambdaArtifactS3Bucket"
+                    },
+                    "SNSTopicEmailAddress": {
+                        "Ref": "SNSTopicEmailAddress"
                     }
                 },
                 "TemplateURL": {
