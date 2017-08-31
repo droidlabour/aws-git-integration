@@ -26,7 +26,7 @@
             "Description": "AWS Certificate Manager ARN to be used in Application Elastic Load Balancer for SSL traffic",
             "Type": "String"
         },
-        "APPStackName": {
+        "ECSAPPStackName": {
             "Description": "ECS_APP Production Cloudformation Stack Name",
             "Type": "String"
         },
@@ -235,7 +235,7 @@
                                         ]
                                     },
                                     "StackName": {
-                                        "Ref": "APPStackName"
+                                        "Ref": "ECSAPPStackName"
                                     },
                                     "TemplateConfiguration": "CFNTemplate::ecs_app_param.json",
                                     "TemplatePath": "CFNTemplate::ecs_app.json"
@@ -644,8 +644,8 @@
                 "Description": "Gathers and Uploads Cloudformation Parameters, triggered by AWS CodePipeline",
                 "Environment": {
                     "Variables": {
-                        "AppStackName": {
-                            "Ref": "APPStackName"
+                        "ECSAPPStackName": {
+                            "Ref": "ECSAPPStackName"
                         },
                         "ECSTaskDesiredCount": {
                             "Ref": "ECSTaskDesiredCount"

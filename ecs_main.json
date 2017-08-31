@@ -231,7 +231,7 @@
                     "ACMARN": {
                         "Ref": "ACMARN"
                     },
-                    "APPStackName": {
+                    "ECSAPPStackName": {
                         "Fn::GetAtt": [
                             "APP",
                             "Outputs.StackName"
