@@ -614,7 +614,9 @@
 								" >> /etc/environment\n",
                                 "curl -L https://aws-codedeploy-us-east-1.s3.amazonaws.com/latest/install > ./install\n",
                                 "chmod +x ./install\n",
-                                "./install auto\n"
+                                "./install auto\n",
+                                "sed -i -e 's/:max_revisions: 5/:max_revisions: 2/g' /etc/codedeploy-agent/conf/codedeployagent.yml\n",
+                                "service codedeploy-agent restart\n"
                             ]
                         ]
                     }
