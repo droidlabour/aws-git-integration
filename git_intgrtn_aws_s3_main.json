@@ -689,6 +689,44 @@
             },
             "Type": "AWS::S3::Bucket"
         },
+		"ApiGatewayCloudWatchLogsRole": {
+		  "Type": "AWS::IAM::Role",
+		  "Properties": {
+			"AssumeRolePolicyDocument": {
+			  "Version": "2012-10-17",
+			  "Statement": [{
+				"Effect": "Allow",
+				"Principal": { "Service": ["apigateway.amazonaws.com"] },
+				"Action": ["sts:AssumeRole"]
+			  }]
+			},
+			"Policies": [{
+			  "PolicyName": "ApiGatewayLogsPolicy",
+			  "PolicyDocument": {
+				"Version": "2012-10-17",
+				"Statement": [{
+				  "Effect": "Allow",
+				  "Action": [
+					"logs:CreateLogGroup",
+					"logs:CreateLogStream",
+					"logs:DescribeLogGroups",
+					"logs:DescribeLogStreams",
+					"logs:PutLogEvents",
+					"logs:GetLogEvents",
+					"logs:FilterLogEvents"
+				  ],
+				  "Resource": "*"
+				}]
+			  }
+			}]
+		  }
+		},
+		"ApiGatewayAccount": {
+		  "Type" : "AWS::ApiGateway::Account",
+		  "Properties" : {
+			"CloudWatchRoleArn" : {"Fn::GetAtt" : ["ApiGatewayCloudWatchLogsRole", "Arn"] }
+		  }
+		},
         "WebHookApi": {
             "Properties": {
                 "Body": {
@@ -971,6 +1009,7 @@
             "Type": "AWS::ApiGateway::Deployment"
         },
         "WebHookApiProdStage": {
+			"DependsOn" : ["ApiGatewayAccount"],
             "Properties": {
                 "DeploymentId": {
                     "Ref": "WebHookApiDeployment"
