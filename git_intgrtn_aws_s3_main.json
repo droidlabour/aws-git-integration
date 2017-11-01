@@ -836,7 +836,7 @@
                                                         "Ref": "CreateSSHKey"
                                                     },
                                                     "\",\n",
-													"    \"raw-body\" : $input.body\n",
+													"    \"raw-body\" : $input.json('$')\n",
                                                     "    }\n",
                                                     "}"
                                                 ]
