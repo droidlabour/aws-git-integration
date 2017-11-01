@@ -1014,6 +1014,22 @@
                 "DeploymentId": {
                     "Ref": "WebHookApiDeployment"
                 },
+				"MethodSettings": [
+					{
+                        "ResourcePath": "/gitpull",
+                        "HttpMethod": "POST",
+                        "LoggingLevel": "INFO",
+                        "MetricsEnabled": true,
+                        "DataTraceEnabled": true
+                    },
+                    {
+                        "ResourcePath": "/zipdl",
+                        "HttpMethod": "POST",
+                        "LoggingLevel": "INFO",
+                        "MetricsEnabled": true,
+                        "DataTraceEnabled": true
+                    }
+				],
                 "RestApiId": {
                     "Ref": "WebHookApi"
                 },
