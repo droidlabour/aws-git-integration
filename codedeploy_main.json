@@ -9,8 +9,8 @@
             "CodeDeploy": {
                 "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/codedeploy.json"
             },
-            "AddCodedeployS3Trigger": {
-                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/add_codedeploy_s3_trigger.json"
+            "CodePipeline": {
+                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/codedeploy_codepipeline.json"
             }
         }
     },
@@ -122,14 +122,6 @@
         "VPC": {
             "Description": "VPC ID for EC2 and Elastic Load Balancer",
             "Type": "AWS::EC2::VPC::Id"
-        },
-        "RepoBucket": {
-            "Description": "The name of the bucket where your zipped code will be uploaded",
-            "Type": "String"
-        },
-        "RepoZipPath": {
-            "Description": "Repository zip key path",
-            "Type": "String"
         }
     },
     "Resources": {
@@ -205,7 +197,7 @@
             },
             "Type": "AWS::CloudFormation::Stack"
         },
-        "AddCodedeployS3Trigger": {
+        "CodePipeline": {
             "Properties": {
                 "Parameters": {
                     "Application": {
@@ -214,23 +206,29 @@
                     "Environment": {
                         "Ref": "Environment"
                     },
-                    "CodeDeployStackName": {
+					"Branch": {
+						"Ref": "Branch"
+					},
+					"GithubOwner": {
+						"Ref": "GithubOwner"
+					},
+					"PersonalAccessToken": {
+						"Ref": "PersonalAccessToken"
+					},
+					"Repo": {
+						"Ref": "Repo"
+					},
+					"CodeDeployStackName": {
                         "Fn::GetAtt": [
                             "CodeDeploy",
                             "Outputs.StackName"
                         ]
-                    },
-                    "RepoBucket": {
-                        "Ref": "RepoBucket"
-                    },
-                    "RepoZipPath": {
-                        "Ref": "RepoZipPath"
                     }
                 },
                 "TemplateURL": {
                     "Fn::FindInMap": [
                         "TemplateURL",
-                        "AddCodedeployS3Trigger",
+                        "CodePipeline",
                         "url"
                     ]
                 }

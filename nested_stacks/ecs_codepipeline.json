@@ -1,0 +1,833 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "AWS CodePipeline with Cloudformation deploy stage for ECS",
+    "Outputs": {
+        "ArtifactS3BucketName": {
+            "Description": "AWS S3 Bucket Name",
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ArtifactS3BucketName"
+                }
+            },
+            "Value": {
+                "Ref": "ArtifactS3BucketName"
+            }
+        },
+        "StackName": {
+            "Description": "Stack Name",
+            "Value": {
+                "Ref": "AWS::StackName"
+            }
+        }
+    },
+    "Parameters": {
+        "ACMARN": {
+            "ConstraintDescription": "must be a valid AWS ARN.",
+            "Description": "AWS Certificate Manager ARN to be used in Application Elastic Load Balancer for SSL traffic",
+            "Type": "String"
+        },
+        "ECSAPPStackName": {
+            "Description": "ECS_APP Production Cloudformation Stack Name",
+            "Type": "String"
+        },
+        "Application": {
+            "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
+            "Description": "Application Name",
+            "Type": "String"
+        },
+        "ContainerPort": {
+            "Default": "80",
+            "Description": "ContainerPort",
+            "Type": "Number"
+        },
+        "ECRImageTag": {
+            "Default": "latest",
+            "Description": "Name of the docker image tag",
+            "Type": "String"
+        },
+        "ECRStackName": {
+            "AllowedPattern": "^[a-zA-Z][-a-zA-Z0-9]*$",
+            "Description": "Name of an active CloudFormation stack that contains the ECR resource",
+            "MaxLength": 255,
+            "MinLength": 1,
+            "Type": "String"
+        },
+        "ECSClusterStackName": {
+            "AllowedPattern": "^[a-zA-Z][-a-zA-Z0-9]*$",
+            "Description": "Name of an active CloudFormation stack that contains the ECS Cluster resources",
+            "MaxLength": 255,
+            "MinLength": 1,
+            "Type": "String"
+        },
+        "ECSTaskDesiredCount": {
+            "Default": "0",
+            "Description": "No of ECS task count",
+            "Type": "Number"
+        },
+        "Environment": {
+            "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
+            "Description": "Environment Name",
+            "Type": "String"
+        },
+        "S3Bucket": {
+            "Description": "S3 Source Bucket Name",
+            "Type": "String"
+        },
+        "S3ObjectLocation": {
+            "Description": "S3 Object Location",
+            "Type": "String"
+        },
+        "Subnets": {
+            "Description": "Application load balancer Subnets ID",
+            "Type": "List<AWS::EC2::Subnet::Id>"
+        },
+        "VPC": {
+            "Description": "VPC ID for ECS Container Instance and TargetGroups",
+            "Type": "AWS::EC2::VPC::Id"
+        },
+        "LambdaArtifactS3Bucket": {
+            "Default": "open-source-artifacts",
+            "Description": "S3 Bucket Name where Lambda Code is stored, must be in the same region where the stack is deployed. Keep the default if your're deploying  it in us-east-1",
+            "Type": "String"
+        },
+        "SNSTopicEmailAddress": {
+            "Description": "Email Address for Manual Approval of Deployment",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "AppPipeline": {
+            "Properties": {
+                "ArtifactStore": {
+                    "Location": {
+                        "Ref": "ArtifactS3BucketName"
+                    },
+                    "Type": "S3"
+                },
+                "Name": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            }
+                        ]
+                    ]
+                },
+                "RestartExecutionOnUpdate": true,
+                "RoleArn": {
+                    "Fn::GetAtt": [
+                        "CodePipelineServiceRole",
+                        "Arn"
+                    ]
+                },
+                "Stages": [
+                    {
+                        "Actions": [
+                            {
+                                "ActionTypeId": {
+                                    "Category": "Source",
+                                    "Owner": "AWS",
+                                    "Provider": "S3",
+                                    "Version": "1"
+                                },
+                                "Configuration": {
+                                    "S3Bucket": {
+                                        "Ref": "S3Bucket"
+                                    },
+                                    "S3ObjectKey": {
+                                        "Ref": "S3ObjectLocation"
+                                    }
+                                },
+                                "Name": "Source",
+                                "OutputArtifacts": [
+                                    {
+                                        "Name": "ApplicationSource"
+                                    }
+                                ],
+                                "RunOrder": 1
+                            }
+                        ],
+                        "Name": "Source"
+                    },
+                    {
+                        "Actions": [
+                            {
+                                "ActionTypeId": {
+                                    "Category": "Invoke",
+                                    "Owner": "AWS",
+                                    "Provider": "Lambda",
+                                    "Version": "1"
+                                },
+                                "Configuration": {
+                                    "FunctionName": {
+                                        "Ref": "Lambda"
+                                    }
+                                },
+                                "Name": "Lambda",
+                                "OutputArtifacts": [
+                                    {
+                                        "Name": "CFNTemplate"
+                                    }
+                                ],
+                                "RunOrder": 1
+                            }
+                        ],
+                        "Name": "Manifest"
+                    },
+                    {
+                        "Actions": [
+                            {
+                                "ActionTypeId": {
+                                    "Category": "Build",
+                                    "Owner": "AWS",
+                                    "Provider": "CodeBuild",
+                                    "Version": "1"
+                                },
+                                "Configuration": {
+                                    "ProjectName": {
+                                        "Ref": "CodeBuild"
+                                    }
+                                },
+                                "InputArtifacts": [
+                                    {
+                                        "Name": "ApplicationSource"
+                                    }
+                                ],
+                                "Name": "Build",
+                                "OutputArtifacts": [
+                                    {
+                                        "Name": "BuildOutput"
+                                    }
+                                ],
+                                "RunOrder": 1
+                            }
+                        ],
+                        "Name": "Build"
+                    },
+                    {
+                        "Actions": [
+                            {
+                                "ActionTypeId": {
+                                    "Category": "Deploy",
+                                    "Owner": "AWS",
+                                    "Provider": "CloudFormation",
+                                    "Version": "1"
+                                },
+                                "Configuration": {
+                                    "ActionMode": "CREATE_UPDATE",
+                                    "Capabilities": "CAPABILITY_NAMED_IAM",
+                                    "ParameterOverrides": {
+                                        "Fn::Join": [
+                                            "\n",
+                                            [
+                                                "{",
+                                                "\"ECRImageTag\": {",
+                                                "\"Fn::GetParam\": [\"BuildOutput\", \"build.json\", \"tag\"]",
+                                                "}",
+                                                "}"
+                                            ]
+                                        ]
+                                    },
+                                    "RoleArn": {
+                                        "Fn::GetAtt": [
+                                            "CFNRole",
+                                            "Arn"
+                                        ]
+                                    },
+                                    "StackName": {
+                                        "Ref": "ECSAPPStackName"
+                                    },
+                                    "TemplateConfiguration": "CFNTemplate::ecs_app_param.json",
+                                    "TemplatePath": "CFNTemplate::ecs_app.json"
+                                },
+                                "InputArtifacts": [
+                                    {
+                                        "Name": "BuildOutput"
+                                    },
+                                    {
+                                        "Name": "CFNTemplate"
+                                    }
+                                ],
+                                "Name": "Production_Release",
+                                "RunOrder": 1
+                            }
+                        ],
+                        "Name": "Production_Release"
+                    }
+                ]
+            },
+            "Type": "AWS::CodePipeline::Pipeline"
+        },
+        "ArtifactS3BucketName": {
+            "Properties": {
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "CFNRole": {
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "cloudformation.amazonaws.com"
+                            },
+                            "Sid": ""
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/AdministratorAccess"
+                ],
+                "Path": "/",
+                "RoleName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "IAM",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            },
+                            "CFN",
+                            "Role"
+                        ]
+                    ]
+                }
+            },
+            "Type": "AWS::IAM::Role"
+        },
+        "CodeBuild": {
+            "Properties": {
+                "Artifacts": {
+                    "Location": {
+                        "Ref": "ArtifactS3BucketName"
+                    },
+                    "Name": {
+                        "Fn::Join": [
+                            "-",
+                            [
+                                "CodeBuildArtifacts",
+                                {
+                                    "Ref": "Application"
+                                },
+                                {
+                                    "Ref": "Environment"
+                                }
+                            ]
+                        ]
+                    },
+                    "Type": "S3"
+                },
+                "Description": {
+                    "Fn::Join": [
+                        " ",
+                        [
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            },
+                            "CodeBuild"
+                        ]
+                    ]
+                },
+                "Environment": {
+                    "ComputeType": "BUILD_GENERAL1_SMALL",
+                    "EnvironmentVariables": [
+                        {
+                            "Name": "ECR_URI",
+                            "Value": {
+                                "Fn::ImportValue": {
+                                    "Fn::Sub": "${ECRStackName}-ECR-URI"
+                                }
+                            }
+                        }
+                    ],
+                    "Image": "aws/codebuild/docker:1.12.1",
+                    "Type": "LINUX_CONTAINER"
+                },
+                "Name": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "CodeBuild",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            }
+                        ]
+                    ]
+                },
+                "ServiceRole": {
+                    "Fn::GetAtt": [
+                        "CodeBuildServiceRole",
+                        "Arn"
+                    ]
+                },
+                "Source": {
+                    "Location": {
+                        "Fn::Join": [
+                            "/",
+                            [
+                                {
+                                    "Ref": "S3Bucket"
+                                },
+                                {
+                                    "Ref": "S3ObjectLocation"
+                                }
+                            ]
+                        ]
+                    },
+                    "Type": "S3"
+                }
+            },
+            "Type": "AWS::CodeBuild::Project"
+        },
+        "CodeBuildServiceRole": {
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "codebuild.amazonaws.com"
+                            },
+                            "Sid": ""
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "Path": "/service-role/",
+                "Policies": [
+                    {
+                        "PolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Action": [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "*"
+                                    ]
+                                },
+                                {
+                                    "Action": [
+                                        "s3:PutObject",
+                                        "s3:GetObject",
+                                        "s3:GetObjectVersion"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "*"
+                                    ]
+                                },
+                                {
+                                    "Action": [
+                                        "codecommit:GitPull"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "*"
+                                    ]
+                                },
+                                {
+                                    "Action": [
+                                        "ecr:BatchCheckLayerAvailability",
+                                        "ecr:CompleteLayerUpload",
+                                        "ecr:GetAuthorizationToken",
+                                        "ecr:InitiateLayerUpload",
+                                        "ecr:PutImage",
+                                        "ecr:UploadLayerPart"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": [
+                                        "*"
+                                    ]
+                                }
+                            ],
+                            "Version": "2012-10-17"
+                        },
+                        "PolicyName": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    "IAM",
+                                    {
+                                        "Ref": "Application"
+                                    },
+                                    {
+                                        "Ref": "Environment"
+                                    },
+                                    "CodeBuild",
+                                    "Policy"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "RoleName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "IAM",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            },
+                            "CodeBuild",
+                            "Role"
+                        ]
+                    ]
+                }
+            },
+            "Type": "AWS::IAM::Role"
+        },
+        "CodePipelineServiceRole": {
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "codepipeline.amazonaws.com"
+                            },
+                            "Sid": ""
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/AdministratorAccess"
+                ],
+                "Path": "/",
+                "RoleName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "IAM",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            },
+                            "CodePipeline",
+                            "Role"
+                        ]
+                    ]
+                }
+            },
+            "Type": "AWS::IAM::Role"
+        },
+        "IamRoleLambdaExecution": {
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "sts:AssumeRole"
+                            ],
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "lambda.amazonaws.com"
+                                ]
+                            }
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Action": [
+                                        "logs:CreateLogGroup",
+                                        "logs:CreateLogStream",
+                                        "logs:PutLogEvents"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": "arn:aws:logs:*:*:*"
+                                },
+                                {
+                                    "Action": [
+                                        "s3:GetObject",
+                                        "s3:GetObjectAcl",
+                                        "s3:PutObject",
+                                        "s3:PutObjectAcl"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Action": [
+                                        "cloudformation:DescribeStacks",
+                                        "cloudformation:GetTemplate"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": "*"
+                                },
+                                {
+                                    "Action": [
+                                        "codepipeline:PutJobSuccessResult",
+                                        "codepipeline:PutJobFailureResult"
+                                    ],
+                                    "Effect": "Allow",
+                                    "Resource": "*"
+                                }
+                            ],
+                            "Version": "2012-10-17"
+                        },
+                        "PolicyName": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    "IAM",
+                                    {
+                                        "Ref": "Application"
+                                    },
+                                    {
+                                        "Ref": "Environment"
+                                    },
+                                    "Lambda",
+                                    "Policy"
+                                ]
+                            ]
+                        }
+                    }
+                ],
+                "RoleName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "IAM",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            },
+                            "Lambda",
+                            "Role"
+                        ]
+                    ]
+                }
+            },
+            "Type": "AWS::IAM::Role"
+        },
+        "Lambda": {
+            "Properties": {
+                "Code": {
+                    "S3Bucket": { "Ref": "LambdaArtifactS3Bucket" },
+                    "S3Key": "git_intgrtn_aws_s3/LambdaStageCodePipeline.zip"
+                },
+                "Description": "Gathers and Uploads Cloudformation Parameters, triggered by AWS CodePipeline",
+                "Environment": {
+                    "Variables": {
+                        "ECSAPPStackName": {
+                            "Ref": "ECSAPPStackName"
+                        },
+                        "ECSTaskDesiredCount": {
+                            "Ref": "ECSTaskDesiredCount"
+                        }
+                    }
+                },
+                "FunctionName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "Manifest",
+                            "Generator",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            }
+                        ]
+                    ]
+                },
+                "Handler": "lambda_function.handler",
+                "MemorySize": 128,
+                "Role": {
+                    "Fn::GetAtt": [
+                        "IamRoleLambdaExecution",
+                        "Arn"
+                    ]
+                },
+                "Runtime": "python2.7",
+                "Timeout": 10
+            },
+            "Type": "AWS::Lambda::Function"
+        },
+        "CodeBuildNotify": {
+            "Properties": {
+                "Description": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            },
+                            "Error",
+                            "CodeBuild",
+                            "Notify"
+                        ]
+                    ]
+                },
+                "EventPattern": {
+                    "detail": {
+                        "completed-phase": [
+                            "SUBMITTED",
+                            "PROVISIONING",
+                            "DOWNLOAD_SOURCE",
+                            "INSTALL",
+                            "PRE_BUILD",
+                            "BUILD",
+                            "POST_BUILD",
+                            "UPLOAD_ARTIFACTS",
+                            "FINALIZING"
+                        ],
+                        "completed-phase-status": [
+                            "TIMED_OUT",
+                            "STOPPED",
+                            "FAILED",
+                            "FAULT",
+                            "CLIENT_ERROR"
+                        ],
+                        "project-name": [
+                            {
+                                "Ref": "CodeBuild"
+                            }
+                        ]
+                    },
+                    "detail-type": [
+                        "CodeBuild Build Phase Change"
+                    ],
+                    "source": [
+                        "aws.codebuild"
+                    ]
+                },
+                "State": "ENABLED",
+                "Targets": [
+                    {
+                        "Arn": {
+                            "Ref": "SNSTopic"
+                        },
+                        "Id": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "Application"
+                                    },
+                                    {
+                                        "Ref": "Environment"
+                                    },
+                                    "Error",
+                                    "CodeBuild",
+                                    "SNS",
+                                    "Id"
+                                ]
+                            ]
+                        }
+                    }
+                ]
+            },
+            "Type": "AWS::Events::Rule"
+        },
+        "SNSTopic": {
+            "Properties": {
+                "Subscription": [
+                    {
+                        "Endpoint": {
+                            "Ref": "SNSTopicEmailAddress"
+                        },
+                        "Protocol": "email"
+                    }
+                ]
+            },
+            "Type": "AWS::SNS::Topic"
+        },
+        "SNSTopicPolicy": {
+            "Properties": {
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+							"Sid": "__default_statement_ID",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": "*"
+                            },
+                            "Action": [
+								"SNS:GetTopicAttributes",
+								"SNS:SetTopicAttributes",
+								"SNS:AddPermission",
+								"SNS:RemovePermission",
+								"SNS:DeleteTopic",
+								"SNS:Subscribe",
+								"SNS:ListSubscriptionsByTopic",
+								"SNS:ListSubscriptionsByTopic",
+								"SNS:Publish",
+								"SNS:Receive"
+							],
+                            "Resource": {
+                                "Ref": "SNSTopic"
+                            },
+							"Condition": {
+								"StringEquals": {
+									"AWS:SourceOwner": { "Ref": "AWS::AccountId" }
+								}
+							}
+                        },
+                        {
+							"Sid": "AWSEvents",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "events.amazonaws.com"
+                            },
+                            "Action": "sns:Publish",
+                            "Resource": {
+                                "Ref": "SNSTopic"
+                            }
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "Topics": [
+                    {
+                        "Ref": "SNSTopic"
+                    }
+                ]
+            },
+            "Type": "AWS::SNS::TopicPolicy"
+        }
+    }
+}

@@ -1,0 +1,216 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "AWS CodePipeline with CodeDeploy deploy stage",
+    "Outputs": {
+        "ArtifactS3BucketName": {
+            "Description": "AWS S3 Bucket Name",
+            "Export": {
+                "Name": {
+                    "Fn::Sub": "${AWS::StackName}-ArtifactS3BucketName"
+                }
+            },
+            "Value": {
+                "Ref": "ArtifactS3BucketName"
+            }
+        },
+        "StackName": {
+            "Description": "Stack Name",
+            "Value": {
+                "Ref": "AWS::StackName"
+            }
+        }
+    },
+    "Parameters": {
+        "Application": {
+            "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
+            "Description": "Application Name",
+            "Type": "String"
+        },
+        "Environment": {
+            "AllowedPattern": "(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*[a-z0-9]+(?:[._-][a-z0-9]+)*",
+            "Description": "Environment Name",
+            "Type": "String"
+        },
+        "Branch": {
+            "Description": "Github Repository Branch Name",
+            "Type": "String"
+        },
+        "GithubOwner": {
+            "Description": "Github Owner Name",
+            "Type": "String"
+        },
+        "PersonalAccessToken": {
+            "Description": "Github PersonalAccessToken",
+            "NoEcho": "true",
+            "Type": "String"
+        },
+        "Repo": {
+            "Description": "Github Repository Name",
+            "Type": "String"
+        },
+        "CodeDeployStackName": {
+            "Description": "CodeDeploy CFN Stack Name",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "AppPipeline": {
+            "Properties": {
+                "ArtifactStore": {
+                    "Location": {
+                        "Ref": "ArtifactS3BucketName"
+                    },
+                    "Type": "S3"
+                },
+                "Name": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            }
+                        ]
+                    ]
+                },
+                "RestartExecutionOnUpdate": true,
+                "RoleArn": {
+                    "Fn::GetAtt": [
+                        "CodePipelineServiceRole",
+                        "Arn"
+                    ]
+                },
+                "Stages": [
+                    {
+                        "Actions": [
+                            {
+                                "ActionTypeId": {
+                                    "Category": "Source",
+                                    "Owner": "ThirdParty",
+                                    "Provider": "GitHub",
+                                    "Version": "1"
+                                },
+                                "Configuration": {
+                                    "Branch": {
+                                        "Ref": "Branch"
+                                    },
+                                    "OAuthToken": {
+                                        "Ref": "PersonalAccessToken"
+                                    },
+                                    "Owner": {
+                                        "Ref": "GithubOwner"
+                                    },
+                                    "PollForSourceChanges": true,
+                                    "Repo": {
+                                        "Ref": "Repo"
+                                    }
+                                },
+                                "Name": {
+                                    "Fn::Join": [
+                                        "-",
+                                        [
+                                            {
+                                                "Ref": "Environment"
+                                            },
+                                            {
+                                                "Ref": "Application"
+                                            }
+                                        ]
+                                    ]
+                                },
+                                "OutputArtifacts": [
+                                    {
+                                        "Name": "ApplicationSource"
+                                    }
+                                ],
+                                "RunOrder": 1
+                            }
+                        ],
+                        "Name": "Source"
+                    },
+                    {
+                        "Actions": [
+                            {
+                                "ActionTypeId": {
+                                    "Category": "Deploy",
+                                    "Owner": "AWS",
+                                    "Provider": "CodeDeploy",
+                                    "Version": "1"
+                                },
+                                "Configuration": {
+                                    "ApplicationName": {
+										"Fn::ImportValue": {
+											"Fn::Sub": "${CodeDeployStackName}-CodeDeployApplication"
+										}
+									},
+                                    "DeploymentGroupName": {
+										"Fn::ImportValue": {
+											"Fn::Sub": "${CodeDeployStackName}-CodeDeploymentGroup"
+										}
+									}
+                                },
+                                "InputArtifacts": [
+                                    {
+                                        "Name": "ApplicationSource"
+                                    }
+                                ],
+                                "Name": "Release",
+                                "RunOrder": 1
+                            }
+                        ],
+                        "Name": "Release"
+                    }
+                ]
+            },
+            "Type": "AWS::CodePipeline::Pipeline"
+        },
+        "ArtifactS3BucketName": {
+            "Properties": {
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            },
+            "Type": "AWS::S3::Bucket"
+        },
+        "CodePipelineServiceRole": {
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "codepipeline.amazonaws.com"
+                            },
+                            "Sid": ""
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/AdministratorAccess"
+                ],
+                "Path": "/",
+                "RoleName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "IAM",
+                            {
+                                "Ref": "Application"
+                            },
+                            {
+                                "Ref": "Environment"
+                            },
+                            "CodePipeline",
+                            "Role"
+                        ]
+                    ]
+                }
+            },
+            "Type": "AWS::IAM::Role"
+        }
+    }
+}

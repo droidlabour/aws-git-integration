@@ -7,7 +7,7 @@
                 "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/ecs_service.json"
             },
             "CodePipeline": {
-                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/codepipeline.json"
+                "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/ecs_codepipeline.json"
             },
             "ECR": {
                 "url": "https://s3.amazonaws.com/open-source-artifacts/git_intgrtn_aws_s3/ecs_registry.json"
