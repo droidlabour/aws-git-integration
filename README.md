@@ -47,6 +47,11 @@ The project consists of 3 Cloudformation templates each of which can be deployed
 
 4. `buildspec.yml` can be used to build on AWS CodeBuild.
 
+### Branch
+* `master`: Contains 3rd part git integration with API Gateway and AWS Lambda, & Load Balancer configured for SSL with AWS Certificate Manager.
+* `without-ssl`: Contains 3rd part git integration with API Gateway and AWS Lambda, but Load Balancer without any SSL support.
+* `rm_webhk_intgrtn`: Doesn't contains any 3rd part git integration with API Gateway and AWS Lambda, only GitHub is integrated with AWS CodePipeline, & Load Balancer configured for SSL with AWS Certificate Manager.
+
 ### Deploying to region other then us-east-1
 1. Create zip file for `AddS3LambdaNotification`, `CreateSSHKey`, `DeleteBucketContents`, `GitPull`, `LambdaStageCodePipeline` and `ZipDownload` directories
 Note: While creating zip, make sure to not provide the parent dir
