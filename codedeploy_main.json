@@ -122,6 +122,23 @@
         "VPC": {
             "Description": "VPC ID for EC2 and Elastic Load Balancer",
             "Type": "AWS::EC2::VPC::Id"
+        },
+        "Branch": {
+            "Description": "Github Repository Branch Name",
+            "Type": "String"
+        },
+        "GithubOwner": {
+            "Description": "Github Owner Name",
+            "Type": "String"
+        },
+        "PersonalAccessToken": {
+            "Description": "Github PersonalAccessToken",
+            "NoEcho": "true",
+            "Type": "String"
+        },
+        "Repo": {
+            "Description": "Github Repository Name",
+            "Type": "String"
         }
     },
     "Resources": {
